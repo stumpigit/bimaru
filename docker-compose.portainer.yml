@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  bimaru:
+    image: ghcr.io/stumpigit/bimaru:latest
+    container_name: bimaru
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+
+      - traefik.http.routers.bimaru.rule=Host(`bimari.suter.email`)
+      - traefik.http.routers.bimaru.entrypoints=websecure
+      - traefik.http.routers.bimaru.tls=true
+      - traefik.http.routers.bimaru.tls.certresolver=letsencrypt
+      - traefik.http.routers.bimaru.tls.domains[0].main=bimari.suter.email
+      - traefik.http.routers.bimaru.service=bimaru
+      - traefik.http.routers.bimaru.middlewares=bimaru-security@docker
+
+      - traefik.http.services.bimaru.loadbalancer.server.port=80
+
+      - traefik.http.middlewares.bimaru-security.headers.browserXssFilter=true
+      - traefik.http.middlewares.bimaru-security.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.bimaru-security.headers.forceSTSHeader=true
+      - traefik.http.middlewares.bimaru-security.headers.stsSeconds=31536000
+      - traefik.http.middlewares.bimaru-security.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.bimaru-security.headers.stsPreload=true
+      - traefik.http.middlewares.bimaru-security.headers.frameDeny=true
+      - traefik.http.middlewares.bimaru-security.headers.referrerPolicy=strict-origin-when-cross-origin
+      - traefik.http.middlewares.bimaru-security.headers.customResponseHeaders.X-Robots-Tag=noindex, nofollow
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
