@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  bimaru:
+    image: ghcr.io/stumpigit/bimaru:latest
+    container_name: bimaru
+    restart: unless-stopped
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.bimaru.rule=Host(`bimari.suter.email`)
+      - traefik.http.routers.bimaru.entrypoints=websecure
+      - traefik.http.routers.bimaru.tls=true
+      - traefik.http.routers.bimaru.tls.certresolver=letsencrypt
+      - traefik.http.routers.bimaru.tls.domains[0].main=bimari.suter.email
+      - traefik.http.services.bimaru.loadbalancer.server.port=80
+    networks:
+      - traefik
+
+networks:
+  traefik:
+    external: true
