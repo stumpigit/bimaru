@@ -225,6 +225,50 @@ function clueTypeForCell(flat, r, c){
   if(n===0)return 's'; if(n===1)return 'e'; return 'm';
 }
 function zeroLinesScore(rc){let s=0; for(let i=0;i<N;i++){ if(rc.r[i]===0)s++; if(rc.c[i]===0)s++; } return s;}
+function orthNeighborsOfAssign(assign, r, c){
+  let left=c>0&&assign[idx(r,c-1)]===SH, right=c<N-1&&assign[idx(r,c+1)]===SH, up=r>0&&assign[idx(r-1,c)]===SH, down=r<N-1&&assign[idx(r+1,c)]===SH;
+  return {left,right,up,down,count:(left?1:0)+(right?1:0)+(up?1:0)+(down?1:0)};
+}
+function clueShipTypeMatches(assign, i, clueType){
+  let r=Math.floor(i/N), c=i%N;
+  if(assign[i]!==SH) return false;
+  let n=orthNeighborsOfAssign(assign,r,c);
+  if(clueType==='s') return n.count===0;
+  if(clueType==='m') return n.count===2 && ((n.left&&n.right) || (n.up&&n.down));
+  if(clueType==='e') return n.count===1;
+  return true;
+}
+function isTrivialWaterClue(puz, key){
+  let i=+key, r=Math.floor(i/N), c=i%N;
+  if(puz.cl[key]!== 'w') return false;
+  if(puz.rc[r]===0 || puz.cc[c]===0) return true;
+  for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+    if(dr===0&&dc===0) continue;
+    let nr=r+dr,nc=c+dc;
+    if(nr<0||nr>=N||nc<0||nc>=N) continue;
+    if(puz.grid[idx(nr,nc)]===SH) return true;
+  }
+  return false;
+}
+function stripTrivialWaterClues(base){
+  let best=clonePuzzle(base);
+  let waterKeys=Object.keys(best.cl)
+    .filter(k=>best.cl[k]==='w' && isTrivialWaterClue(best,k))
+    .sort((a,b)=>waterRemovalPriority(best,b)-waterRemovalPriority(best,a));
+  for(let key of waterKeys){
+    let cand=clonePuzzle(best); delete cand.cl[key];
+    let check=countSolutionsForPuzzle(cand,2);
+    if(check.exact && check.solutions===1){
+      cand.meta.uniqueChecked=true;
+      cand.meta.uniquenessExact=true;
+      cand.meta.solverCalls=check.calls;
+      cand.meta.clueCount=Object.keys(cand.cl).length;
+      cand.meta.score=scorePuzzle(cand);
+      best=cand;
+    }
+  }
+  return best;
+}
 function collectForcedWater(flat, rc){
   let forced=new Set();
   for(let r=0;r<N;r++){
@@ -339,6 +383,9 @@ function clueSatisfied(assign, clueMap){
     let i=+key, t=clueMap[key], v=assign[i];
     if(t==='w' && v!==WA) return false;
     if(t!=='w' && v!==SH) return false;
+    if(t==='s' || t==='m' || t==='e'){
+      if(!clueShipTypeMatches(assign, i, t)) return false;
+    }
   }
   return true;
 }
@@ -352,7 +399,7 @@ function countSolutionsForPuzzle(puz, limit){
     let as=puz.rc[ar]+puz.cc[ac], bs=puz.rc[br]+puz.cc[bc];
     return bs-as;
   });
-  let solutions=0, calls=0, maxCalls=9000;
+  let solutions=0, calls=0, maxCalls=22000;
   function dfs(pos){
     calls++;
     if(calls>maxCalls||solutions>=limit) return;
@@ -417,7 +464,8 @@ function minimizePuzzle(base){
 }
 function generateBestPuzzle(){
   let best=null, bestScore=Infinity;
-  let tries=80;
+  let bestBase=null, bestBaseScore=Infinity;
+  let tries=90;
   for(let t=0;t<tries;t++){
     let flat=genSolution(); if(!flat) continue;
     let base=createInitialPuzzle(flat);
@@ -428,17 +476,22 @@ function generateBestPuzzle(){
     base.meta.uniqueChecked=true;
     base.meta.uniquenessExact=true;
     base.meta.solverCalls=baseCheck.calls;
-    let candidate=minimizePuzzle(base) || base;
-    let finalCheck=countSolutionsForPuzzle(candidate,2);
-    if(!(finalCheck.exact && finalCheck.solutions===1)) continue;
-    candidate.meta.uniqueChecked=true;
-    candidate.meta.uniquenessExact=true;
-    candidate.meta.solverCalls=finalCheck.calls;
-    candidate.meta.zeroLines=zeroLinesScore({r:candidate.rc,c:candidate.cc});
-    candidate.meta.score=scorePuzzle(candidate);
-    if(candidate.meta.score<bestScore){ best=candidate; bestScore=candidate.meta.score; }
+    if(base.meta.score<bestBaseScore){ bestBase=clonePuzzle(base); bestBaseScore=base.meta.score; }
+    for(let m=0;m<3;m++){
+      let candidate=minimizePuzzle(base) || base;
+      candidate=stripTrivialWaterClues(candidate);
+      let finalCheck=countSolutionsForPuzzle(candidate,2);
+      if(!(finalCheck.exact && finalCheck.solutions===1)) continue;
+      candidate.meta.uniqueChecked=true;
+      candidate.meta.uniquenessExact=true;
+      candidate.meta.solverCalls=finalCheck.calls;
+      candidate.meta.zeroLines=zeroLinesScore({r:candidate.rc,c:candidate.cc});
+      candidate.meta.score=scorePuzzle(candidate);
+      if(candidate.meta.score<bestScore){ best=candidate; bestScore=candidate.meta.score; }
+    }
   }
-  return best;
+  if(best) return best;
+  return bestBase;
 }
 
 function build(){
