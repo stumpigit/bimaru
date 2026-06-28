@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚓ BIMARU – Version 6</title>
+<style>
+  :root{
+    --bg:#0a1628;--panel:#13233a;--panel2:#1a3050;--text:#d0e0f0;--muted:#7090b0;--accent:#4fc3f7;
+    --ok:#66bb6a;--err:#ef5350;--warn:#ffd54f;--empty:#162030;--water:#1565a0;--waterClue:#0d4780;
+    --ship:#8b6914;--shipClue:#5d4010;--shipBorder:#c49a28;--cell:48px;
+    --len1:#ffca28;--len1-edge:#ffe082;
+    --len2:#66bb6a;--len2-edge:#a5d6a7;
+    --len3:#29b6f6;--len3-edge:#81d4fa;
+    --len4:#ab47bc;--len4-edge:#ce93d8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);text-align:center;padding:20px}
+  h1{color:var(--accent);font-size:1.6rem;font-weight:300;letter-spacing:.3em;margin:0 0 6px}
+  .subtitle{font-size:.82rem;color:var(--muted);margin-bottom:16px}
+  .btns{margin:10px 0;display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+  .btns button{padding:8px 16px;border:1px solid var(--accent);border-radius:8px;background:rgba(79,195,247,.1);color:var(--text);cursor:pointer;font-size:.82rem}
+  .btns button:hover{background:rgba(79,195,247,.24)}
+  .btns button.primary{background:#0288d1;font-weight:600}
+  .legend{margin:14px 0;display:flex;justify-content:center;gap:18px;flex-wrap:wrap;font-size:.78rem}
+  .legend-item{display:flex;align-items:center;gap:6px}
+  .legend-cell{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px}
+  .legend-empty{background:var(--empty);border:1px solid rgba(255,255,255,.06)}
+  .legend-water{background:var(--water);border:1px solid #1e88e5;color:#fff}
+  .legend-ship{background:var(--ship);border:1px solid var(--shipBorder)}
+  .top-panels{display:flex;flex-direction:column;align-items:center;gap:8px;margin-bottom:10px}
+  .ship-info,.timer-info{font-size:.78rem;color:var(--muted)}
+  #ship-progress{font-size:.82rem;line-height:1.7}
+  .fleet-wrap{display:inline-flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .fleet-item{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06)}
+  .fleet-item.done{border-color:rgba(102,187,106,.5);color:var(--ok);background:rgba(102,187,106,.08)}
+  .fleet-item.over{border-color:rgba(239,83,80,.55);color:var(--err);background:rgba(239,83,80,.08)}
+  .dot{width:9px;height:9px;border-radius:50%;display:inline-block;background:var(--muted)}
+  .fleet-item.done .dot{background:var(--ok)}
+  .fleet-item.over .dot{background:var(--err)}
+  .main-area{margin:18px 0;display:flex;justify-content:center}
+  .board{display:inline-grid;grid-template-columns:repeat(11,var(--cell));grid-template-rows:repeat(11,var(--cell));gap:2px;touch-action:none}
+  .cell,.clue-cell{width:var(--cell);height:var(--cell)}
+  .cell{border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid rgba(255,255,255,.08);transition:.08s;position:relative;overflow:hidden}
+  .cell.empty{background:var(--empty);border-color:rgba(255,255,255,.05)}
+  .cell.water{background:var(--water);border-color:#1e88e5;color:#fff}
+  .cell.water::after{content:'×';font-size:22px;color:rgba(255,255,255,.42);font-weight:700}
+  .cell.ship,.cell.ship-complete{background:var(--ship);border-color:var(--shipBorder)}
+  .cell.clue-water{background:var(--waterClue)!important;border-color:var(--water)!important;cursor:default!important}
+  .cell.clue-water::after{color:rgba(255,255,255,.55)!important}
+  .cell.clue-ship{background:var(--shipClue)!important;border-color:#8b6914!important;cursor:default!important}
+
+  .cell.ship-single,.cell.ship-complete.ship-single,.cell.clue-ship.ship-single{border-radius:50%!important}
+  .cell.ship-single::after,.cell.clue-ship.ship-single::after{content:'';position:absolute;inset:9px;border-radius:50%;background:rgba(255,255,255,.16)}
+  .cell.ship-middle,.cell.ship-complete.ship-middle,.cell.clue-ship.ship-middle{border-radius:14px!important}
+  .cell.ship-middle::after,.cell.clue-ship.ship-middle::after{content:none!important}
+
+  .cell.ship-end-left,.cell.ship-complete.ship-end-left,.cell.clue-ship.ship-end-left{border-radius:26px 7px 7px 26px!important}
+  .cell.ship-end-right,.cell.ship-complete.ship-end-right,.cell.clue-ship.ship-end-right{border-radius:7px 26px 26px 7px!important}
+  .cell.ship-end-up,.cell.ship-complete.ship-end-up,.cell.clue-ship.ship-end-up{border-radius:26px 26px 7px 7px!important}
+  .cell.ship-end-down,.cell.ship-complete.ship-end-down,.cell.clue-ship.ship-end-down{border-radius:7px 7px 26px 26px!important}
+
+  .cell.ship-len-1,.cell.clue-ship.ship-len-1,.legend-len-1{background:var(--len1)!important;border-color:var(--len1-edge)!important}
+  .cell.ship-len-2,.cell.clue-ship.ship-len-2,.legend-len-2{background:var(--len2)!important;border-color:var(--len2-edge)!important}
+  .cell.ship-len-3,.cell.clue-ship.ship-len-3,.legend-len-3{background:var(--len3)!important;border-color:var(--len3-edge)!important}
+  .cell.ship-len-4,.cell.clue-ship.ship-len-4,.legend-len-4{background:var(--len4)!important;border-color:var(--len4-edge)!important}
+  .cell.ship-len-1.ship-single::after,.legend-len-1::after{background:rgba(255,255,255,.18)}
+  .legend-len-1,.legend-len-2,.legend-len-3,.legend-len-4{width:20px;height:20px;border-radius:6px;border:1px solid transparent;display:inline-block;position:relative}
+  .legend-len-1{border-radius:50%}
+
+  .cell.ship-end-left::after,.cell.ship-end-right::after,.cell.ship-end-up::after,.cell.ship-end-down::after,
+  .cell.clue-ship.ship-end-left::after,.cell.clue-ship.ship-end-right::after,.cell.clue-ship.ship-end-up::after,.cell.clue-ship.ship-end-down::after{content:none!important}
+
+  .cell.ship-ok-badge::after,.cell.ship-bad-badge::after{position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;z-index:3;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+  .cell.ship-ok-badge::after{content:'✓';background:rgba(102,187,106,.95);color:#08150a}
+  .cell.ship-bad-badge::after{content:'!';background:rgba(239,83,80,.96);color:#fff}
+
+  .clue-cell{background:var(--panel2);border:1px solid rgba(79,195,247,.16);border-radius:5px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:.76rem;color:var(--muted);user-select:none;transition:.08s}
+  .clue-cell.cleared{color:#97aab7!important}
+  .clue-cell.error{color:var(--err)!important}
+  .corner-cell{background:transparent!important;border:none!important}
+  #status{margin-top:12px;font-size:.82rem;min-height:1.2em}
+  #status.ok{color:var(--ok)}
+  #status.err{color:var(--err)}
+  #status.info{color:var(--muted)}
+  @media (max-width:760px){:root{--cell:34px} body{padding:10px} .legend{gap:10px} .clue-cell{font-size:.65rem}}
+</style>
+</head>
+<body>
+<h1>⚓ BIMARU</h1>
+<div class="subtitle">Solver-basierte Version 6 · Klick: Leer → Wasser → Schiff · Ziehen setzt Wasser</div>
+<div class="btns">
+  <button class="primary" onclick="newGame()">Neues Rätsel</button>
+  <button onclick="check()">Prüfen</button>
+  <button onclick="clearGrid()">Leeren</button>
+  <button onclick="hint()">Tipp</button>
+</div>
+<div class="legend">
+  <div class="legend-item"><div class="legend-cell legend-empty"></div><span>Leer</span></div>
+  <div class="legend-item"><div class="legend-cell legend-water">×</div><span>Wasser</span></div>
+  <div class="legend-item"><div class="legend-cell legend-ship"></div><span>Schiffsteil</span></div>
+  <div class="legend-item"><div class="legend-len-1"></div><span>1er = Gelb</span></div>
+  <div class="legend-item"><div class="legend-len-2"></div><span>2er = Grün</span></div>
+  <div class="legend-item"><div class="legend-len-3"></div><span>3er = Blau</span></div>
+  <div class="legend-item"><div class="legend-len-4"></div><span>4er = Violett</span></div>
+</div>
+<div class="top-panels">
+  <div class="ship-info" id="ship-info"></div>
+  <div id="ship-progress"></div>
+  <div class="timer-info" id="timer">Zeit: 00:00</div>
+</div>
+<div class="main-area"><div class="board" id="board"></div></div>
+<div id="status"></div>
+<script>
+var N=9, SH=1, EM=0, WA=-1;
+var FLEET=[[4,1],[3,2],[2,3],[1,4]], SHIPS=[4,3,3,2,2,2,1,1,1,1];
+var sol=null, grid=[], puzzle=null;
+var drag=false, wasDrag=false, dragR=-1, dragC=-1;
+var shipBadgeTimer=null;
+var timerStarted=false, timerFinished=false, timerStartMs=0, timerInterval=null;
+var deterministicMode=false;
+var deterministicFixture=null;
+
+function idx(r,c){return r*N+c}
+function rcFromFlat(flat){var r=[],c=[]; for(let i=0;i<N;i++){let rs=0,cs=0; for(let j=0;j<N;j++){if(flat[idx(i,j)]===SH)rs++; if(flat[idx(j,i)]===SH)cs++;} r.push(rs); c.push(cs);} return {r,c};}
+function shuffle(a){for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];}}
+function clonePuzzle(p){return {grid:p.grid.slice(), rc:p.rc.slice(), cc:p.cc.slice(), cl:Object.assign({},p.cl), meta:Object.assign({},p.meta||{})};}
+function neighbors4(r,c){let a=[]; if(c>0)a.push([r,c-1]); if(c<N-1)a.push([r,c+1]); if(r>0)a.push([r-1,c]); if(r<N-1)a.push([r+1,c]); return a;}
+function fixtureFromStrings(rows, clueMap){
+  let flat=[];
+  for(let row of rows) for(let ch of row) flat.push(ch==='#'?SH:WA);
+  let rc=rcFromFlat(flat);
+  return {grid:flat.slice(), rc:rc.r, cc:rc.c, cl:Object.assign({},clueMap||{}), meta:{score:0, zeroLines:zeroLinesScore(rc), clueCount:Object.keys(clueMap||{}).length, uniqueChecked:true, uniquenessExact:true, deterministic:true}};
+}
+function deterministicFixtures(){
+  return {
+    intro: fixtureFromStrings([
+      '....#....',
+      '.........',
+      '..###....',
+      '.........',
+      '......##.',
+      '.........',
+      '.#....#..',
+      '.........',
+      '....#....'
+    ].map(r=>r.replace(/\./g,'-')), {4:'s',20:'m',42:'e',54:'s'}),
+    victory: fixtureFromStrings([
+      '###......',
+      '.........',
+      '....##...',
+      '.........',
+      '......#..',
+      '.........',
+      '.#.......',
+      '.........',
+      '........#'
+    ].map(r=>r.replace(/\./g,'-')), {0:'e',2:'e',22:'e',60:'s'})
+  };
+}
+function loadPuzzleFromData(puz){
+  puzzle=clonePuzzle(puz);
+  sol=puzzle.grid.slice();
+  grid=[];
+  for(let r=0;r<N;r++){ let row=[]; for(let c=0;c<N;c++) row.push(EM); grid.push(row); }
+  build();
+  ren();
+  setStatus('Viel Erfolg!','info');
+}
+function setDeterministicMode(name){
+  let fixtures=deterministicFixtures();
+  deterministicFixture=fixtures[name]||fixtures.intro;
+  deterministicMode=true;
+  resetTimer();
+  clearShipBadges();
+  loadPuzzleFromData(deterministicFixture);
+}
+window.setDeterministicMode=setDeterministicMode;
+function formatElapsed(ms){ let total=Math.max(0,Math.floor(ms/1000)), m=Math.floor(total/60), s=total%60; return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); }
+function updateTimerDisplay(){ let el=document.getElementById('timer'); if(!el) return; let text='Zeit: 00:00'; if(timerStarted){ let elapsed=timerFinished ? (Date.now()-timerStartMs) : (Date.now()-timerStartMs); text='Zeit: '+formatElapsed(elapsed); } el.textContent=text; }
+function resetTimer(){ timerStarted=false; timerFinished=false; timerStartMs=0; if(timerInterval){ clearInterval(timerInterval); timerInterval=null; } updateTimerDisplay(); }
+function startTimerIfNeeded(){ if(timerStarted||timerFinished) return; timerStarted=true; timerStartMs=Date.now(); updateTimerDisplay(); timerInterval=setInterval(updateTimerDisplay,1000); }
+function stopTimer(){ if(!timerStarted||timerFinished) return '00:00'; timerFinished=true; if(timerInterval){ clearInterval(timerInterval); timerInterval=null; } let elapsed=formatElapsed(Date.now()-timerStartMs); document.getElementById('timer').textContent='Zeit: '+elapsed; return elapsed; }
+function anyPlayerMarks(){ for(let r=0;r<N;r++)for(let c=0;c<N;c++) if(grid[r][c]!==EM) return true; return false; }
+function isSolvedState(){
+  if(!sol||!puzzle||!grid||!grid.length) return false;
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    if(isCl(r,c)) continue;
+    let hasShip=grid[r][c]===SH;
+    let shouldShip=sol[idx(r,c)]===SH;
+    if(shouldShip && !hasShip) return false;
+    if(!shouldShip && hasShip) return false;
+  }
+  return true;
+}
+function maybeFinishGame(){ if(!isSolvedState()) return false; let elapsed=stopTimer(); clearShipBadges(); setStatus('🎉 Gratulation! Du hast das Rätsel gelöst – Zeit: '+elapsed,'ok'); return true; }
+function autoCheckAfterMove(changedToShip){ if(!puzzle||!sol) return; if(anyPlayerMarks()) startTimerIfNeeded(); if(changedToShip) check(true); else maybeFinishGame(); }
+
+function genSolution(){
+  let g=new Array(N*N).fill(0);
+  for(let si=0;si<SHIPS.length;si++){
+    let len=SHIPS[si], placed=false;
+    for(let att=0;att<1500 && !placed; att++){
+      let dir=Math.random()<0.5?'h':'v';
+      let r=Math.floor(Math.random()*N), c=Math.floor(Math.random()*N);
+      if(dir==='h'&&c+len>N)continue;
+      if(dir==='v'&&r+len>N)continue;
+      let ok=true;
+      for(let i=0;i<len;i++){
+        let rr=dir==='h'?r:r+i, cc=dir==='h'?c+i:c;
+        for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+          let nr=rr+dr,nc=cc+dc; if(nr<0||nr>=N||nc<0||nc>=N)continue; if(g[idx(nr,nc)]===SH) ok=false;
+        }
+      }
+      if(ok){for(let i=0;i<len;i++){let rr=dir==='h'?r:r+i, cc=dir==='h'?c+i:c; g[idx(rr,cc)]=SH;} placed=true;}
+    }
+    if(!placed)return null;
+  }
+  return g;
+}
+
+function clueTypeForCell(flat, r, c){
+  let l=c>0&&flat[idx(r,c-1)]===SH, ri=c<N-1&&flat[idx(r,c+1)]===SH, u=r>0&&flat[idx(r-1,c)]===SH, d=r<N-1&&flat[idx(r+1,c)]===SH;
+  let n=(l?1:0)+(ri?1:0)+(u?1:0)+(d?1:0);
+  if(n===0)return 's'; if(n===1)return 'e'; return 'm';
+}
+function zeroLinesScore(rc){let s=0; for(let i=0;i<N;i++){ if(rc.r[i]===0)s++; if(rc.c[i]===0)s++; } return s;}
+function collectForcedWater(flat, rc){
+  let forced=new Set();
+  for(let r=0;r<N;r++){
+    for(let c=0;c<N;c++){
+      let i=idx(r,c);
+      if(flat[i]!==SH) continue;
+      for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+        let nr=r+dr,nc=c+dc;
+        if(nr<0||nr>=N||nc<0||nc>=N) continue;
+        let ni=idx(nr,nc);
+        if(flat[ni]!==SH) forced.add(ni);
+      }
+    }
+  }
+  for(let r=0;r<N;r++) if(rc.r[r]===0 || rc.r[r]===N){ for(let c=0;c<N;c++) if(flat[idx(r,c)]!==SH) forced.add(idx(r,c)); }
+  for(let c=0;c<N;c++) if(rc.c[c]===0 || rc.c[c]===N){ for(let r=0;r<N;r++) if(flat[idx(r,c)]!==SH) forced.add(idx(r,c)); }
+  for(let r=0;r<N;r++) if(rc.r[r]===flat.slice(r*N,r*N+N).filter(v=>v===SH).length){ for(let c=0;c<N;c++) if(flat[idx(r,c)]!==SH) forced.add(idx(r,c)); }
+  for(let c=0;c<N;c++){
+    let shipsInCol=0; for(let r=0;r<N;r++) if(flat[idx(r,c)]===SH) shipsInCol++;
+    if(rc.c[c]===shipsInCol){ for(let r=0;r<N;r++) if(flat[idx(r,c)]!==SH) forced.add(idx(r,c)); }
+  }
+  return [...forced];
+}
+function createInitialPuzzle(flat){
+  let rc=rcFromFlat(flat), cl={};
+  let shipCells=[], waterCells=[];
+  for(let i=0;i<N*N;i++){ if(flat[i]===SH) shipCells.push(i); else waterCells.push(i); }
+  shuffle(shipCells); shuffle(waterCells);
+  let endCells=shipCells.filter(i=>clueTypeForCell(flat,Math.floor(i/N),i%N)==='e');
+  let midCells=shipCells.filter(i=>clueTypeForCell(flat,Math.floor(i/N),i%N)==='m');
+  let singleCells=shipCells.filter(i=>clueTypeForCell(flat,Math.floor(i/N),i%N)==='s');
+  shuffle(endCells); shuffle(midCells); shuffle(singleCells);
+  if(endCells[0]!==undefined) cl[endCells[0]]='e';
+  if(endCells[1]!==undefined) cl[endCells[1]]='e';
+  if(midCells[0]!==undefined) cl[midCells[0]]='m';
+  if(singleCells[0]!==undefined) cl[singleCells[0]]='s';
+  for(let i=0;i<4 && i<waterCells.length;i++) cl[waterCells[i]]='w';
+  for(let i=0;i<shipCells.length && Object.keys(cl).length<10;i++) if(cl[shipCells[i]]===undefined) cl[shipCells[i]]=clueTypeForCell(flat,Math.floor(shipCells[i]/N),shipCells[i]%N);
+  for(let i=4;i<waterCells.length && Object.keys(cl).length<12;i++) if(cl[waterCells[i]]===undefined) cl[waterCells[i]]='w';
+  return {grid:flat.slice(), rc:rc.r, cc:rc.c, cl:cl, meta:{score:0, zeroLines:zeroLinesScore(rc), clueCount:Object.keys(cl).length, uniqueChecked:false, uniquenessExact:false}};
+}
+
+function waterRemovalPriority(puz, key){
+  let i=+key, r=Math.floor(i/N), c=i%N;
+  let score=0;
+  if(puz.rc[r]===0 || puz.cc[c]===0) score+=50;
+  let rowShips=0, colShips=0;
+  for(let x=0;x<N;x++){ if(puz.grid[idx(r,x)]===SH) rowShips++; if(puz.grid[idx(x,c)]===SH) colShips++; }
+  if(puz.rc[r]===rowShips) score+=25;
+  if(puz.cc[c]===colShips) score+=25;
+  for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+    if(dr===0&&dc===0) continue;
+    let nr=r+dr,nc=c+dc;
+    if(nr<0||nr>=N||nc<0||nc>=N) continue;
+    if(puz.grid[idx(nr,nc)]===SH) score+=6;
+  }
+  return score;
+}
+
+function partialValid(assign, rowTarget, colTarget){
+  for(let r=0;r<N;r++){ let ships=0, unknown=0; for(let c=0;c<N;c++){ let v=assign[idx(r,c)]; if(v===SH)ships++; else if(v===null)unknown++; } if(ships>rowTarget[r]) return false; if(ships+unknown<rowTarget[r]) return false; }
+  for(let c=0;c<N;c++){ let ships=0, unknown=0; for(let r=0;r<N;r++){ let v=assign[idx(r,c)]; if(v===SH)ships++; else if(v===null)unknown++; } if(ships>colTarget[c]) return false; if(ships+unknown<colTarget[c]) return false; }
+  return true;
+}
+function localAdjacencyOk(assign, r, c){
+  if(assign[idx(r,c)]!==SH) return true;
+  for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+    if(dr===0&&dc===0)continue;
+    let nr=r+dr,nc=c+dc; if(nr<0||nr>=N||nc<0||nc>=N)continue;
+    if(assign[idx(nr,nc)]!==SH)continue;
+    if(Math.abs(dr)===1 && Math.abs(dc)===1) return false;
+  }
+  return true;
+}
+function lineShapePossible(assign){
+  let vis=new Array(N*N).fill(false);
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    let k=idx(r,c); if(assign[k]!==SH || vis[k]) continue;
+    let stack=[[r,c]], comp=[];
+    while(stack.length){ let [rr,cc]=stack.pop(), kk=idx(rr,cc); if(vis[kk]||assign[kk]!==SH) continue; vis[kk]=true; comp.push([rr,cc]); for(let [nr,nc] of neighbors4(rr,cc)) stack.push([nr,nc]); }
+    if(comp.length>4) return false;
+    let rows=comp.map(x=>x[0]), cols=comp.map(x=>x[1]);
+    let minR=Math.min(...rows), maxR=Math.max(...rows), minC=Math.min(...cols), maxC=Math.max(...cols);
+    let h=minR===maxR, v=minC===maxC;
+    if(!(h||v)) return false;
+    if(h && maxC-minC+1>4) return false;
+    if(v && maxR-minR+1>4) return false;
+  }
+  return true;
+}
+function finalFleetOk(assign){
+  let vis=new Array(N*N).fill(false), cnt={1:0,2:0,3:0,4:0};
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    let k=idx(r,c); if(assign[k]!==SH || vis[k]) continue;
+    let stack=[[r,c]], comp=[];
+    while(stack.length){ let [rr,cc]=stack.pop(), kk=idx(rr,cc); if(vis[kk]||assign[kk]!==SH) continue; vis[kk]=true; comp.push([rr,cc]); for(let [nr,nc] of neighbors4(rr,cc)) stack.push([nr,nc]); }
+    let rows=comp.map(x=>x[0]), cols=comp.map(x=>x[1]);
+    let minR=Math.min(...rows), maxR=Math.max(...rows), minC=Math.min(...cols), maxC=Math.max(...cols);
+    let h=minR===maxR, v=minC===maxC;
+    if(!(h||v)) return false;
+    let len=comp.length;
+    if(h && maxC-minC+1!==len) return false;
+    if(v && maxR-minR+1!==len) return false;
+    let compSet=new Set(comp.map(p=>p[0]+','+p[1]));
+    for(let [rr,cc] of comp){ for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){ if(dr===0&&dc===0)continue; let nr=rr+dr,nc=cc+dc; if(nr<0||nr>=N||nc<0||nc>=N)continue; if(assign[idx(nr,nc)]!==SH)continue; if(!compSet.has(nr+','+nc)) return false; }}
+    if(cnt[len]===undefined) return false; cnt[len]++;
+  }
+  return cnt[1]===4 && cnt[2]===3 && cnt[3]===2 && cnt[4]===1;
+}
+function clueSatisfied(assign, clueMap){
+  for(let key in clueMap){
+    let i=+key, t=clueMap[key], v=assign[i];
+    if(t==='w' && v!==WA) return false;
+    if(t!=='w' && v!==SH) return false;
+  }
+  return true;
+}
+function countSolutionsForPuzzle(puz, limit){
+  let assign=new Array(N*N).fill(null);
+  for(let key in puz.cl){ let i=+key, t=puz.cl[key]; assign[i]=(t==='w'?WA:SH); }
+  let order=[];
+  for(let i=0;i<N*N;i++) if(assign[i]===null) order.push(i);
+  order.sort((a,b)=>{
+    let ar=Math.floor(a/N), ac=a%N, br=Math.floor(b/N), bc=b%N;
+    let as=puz.rc[ar]+puz.cc[ac], bs=puz.rc[br]+puz.cc[bc];
+    return bs-as;
+  });
+  let solutions=0, calls=0, maxCalls=9000;
+  function dfs(pos){
+    calls++;
+    if(calls>maxCalls||solutions>=limit) return;
+    if(pos===order.length){
+      if(partialValid(assign,puz.rc,puz.cc) && clueSatisfied(assign,puz.cl) && finalFleetOk(assign)) solutions++;
+      return;
+    }
+    let i=order[pos], r=Math.floor(i/N), c=i%N;
+    assign[i]=WA;
+    if(partialValid(assign,puz.rc,puz.cc) && lineShapePossible(assign)) dfs(pos+1);
+    assign[i]=SH;
+    if(localAdjacencyOk(assign,r,c) && partialValid(assign,puz.rc,puz.cc) && lineShapePossible(assign)) dfs(pos+1);
+    assign[i]=null;
+  }
+  if(!partialValid(assign,puz.rc,puz.cc) || !lineShapePossible(assign)) return {solutions:0, exact:true, calls:0};
+  dfs(0);
+  if(calls>maxCalls) return {solutions:solutions, exact:false, calls:calls};
+  return {solutions:solutions, exact:true, calls:calls};
+}
+function scorePuzzle(p){
+  let clues=Object.keys(p.cl).length;
+  let zero=zeroLinesScore({r:p.rc,c:p.cc});
+  let ends=0,mids=0,singles=0,water=0;
+  for(let k in p.cl){ let t=p.cl[k]; if(t==='e')ends++; else if(t==='m')mids++; else if(t==='s')singles++; else if(t==='w')water++; }
+  let penalty=clues*8 + water*2 + zero*9;
+  if(ends<2) penalty+=20; if(mids<1) penalty+=16; if(singles<1) penalty+=8;
+  return penalty;
+}
+function minimizePuzzle(base){
+  let best=clonePuzzle(base);
+  best.meta.score=scorePuzzle(best);
+  let keys=Object.keys(best.cl);
+  keys.sort((a,b)=>{
+    let ta=best.cl[a], tb=best.cl[b];
+    if(ta==='w' && tb!=='w') return -1;
+    if(tb==='w' && ta!=='w') return 1;
+    if(ta==='w' && tb==='w') return waterRemovalPriority(best,b)-waterRemovalPriority(best,a);
+    return Math.random()<0.5?-1:1;
+  });
+  for(let key of keys){
+    if(!best) break;
+    if(Object.keys(best.cl).length<=10) break;
+    let cand=clonePuzzle(best); delete cand.cl[key];
+    let check=countSolutionsForPuzzle(cand,2);
+    if(check.exact && check.solutions===1){
+      cand.meta.uniqueChecked=true;
+      cand.meta.uniquenessExact=true;
+      cand.meta.solverCalls=check.calls;
+      cand.meta.clueCount=Object.keys(cand.cl).length;
+      cand.meta.score=scorePuzzle(cand);
+      best=cand;
+    }
+  }
+  if(!best) return null;
+  let finalCheck=countSolutionsForPuzzle(best,2);
+  best.meta.uniqueChecked=finalCheck.solutions===1;
+  best.meta.uniquenessExact=finalCheck.exact;
+  best.meta.solverCalls=finalCheck.calls;
+  best.meta.clueCount=Object.keys(best.cl).length;
+  best.meta.score=scorePuzzle(best);
+  return finalCheck.exact && finalCheck.solutions===1 ? best : null;
+}
+function generateBestPuzzle(){
+  let best=null, bestScore=Infinity;
+  let tries=80;
+  for(let t=0;t<tries;t++){
+    let flat=genSolution(); if(!flat) continue;
+    let base=createInitialPuzzle(flat);
+    base.meta.zeroLines=zeroLinesScore({r:base.rc,c:base.cc});
+    base.meta.score=scorePuzzle(base);
+    let baseCheck=countSolutionsForPuzzle(base,2);
+    if(!(baseCheck.exact && baseCheck.solutions===1)) continue;
+    base.meta.uniqueChecked=true;
+    base.meta.uniquenessExact=true;
+    base.meta.solverCalls=baseCheck.calls;
+    let candidate=minimizePuzzle(base) || base;
+    let finalCheck=countSolutionsForPuzzle(candidate,2);
+    if(!(finalCheck.exact && finalCheck.solutions===1)) continue;
+    candidate.meta.uniqueChecked=true;
+    candidate.meta.uniquenessExact=true;
+    candidate.meta.solverCalls=finalCheck.calls;
+    candidate.meta.zeroLines=zeroLinesScore({r:candidate.rc,c:candidate.cc});
+    candidate.meta.score=scorePuzzle(candidate);
+    if(candidate.meta.score<bestScore){ best=candidate; bestScore=candidate.meta.score; }
+  }
+  return best;
+}
+
+function build(){
+  let board=document.getElementById('board'); board.innerHTML='';
+  let addCorner=()=>{let d=document.createElement('div'); d.className='clue-cell corner-cell'; board.appendChild(d)};
+  let addClue=id=>{let d=document.createElement('div'); d.className='clue-cell'; d.id=id; board.appendChild(d)};
+  let addCell=(r,c)=>{let d=document.createElement('div'); d.className='cell empty'; d.dataset.r=r; d.dataset.c=c; d.addEventListener('mousedown',e=>dn(e,r,c)); d.addEventListener('mouseenter',e=>en(e,r,c)); d.addEventListener('click',e=>cl(e,r,c)); board.appendChild(d)};
+  addCorner(); for(let c=0;c<N;c++)addClue('top-'+c); addCorner();
+  for(let r=0;r<N;r++){ addClue('left-'+r); for(let c=0;c<N;c++) addCell(r,c); addClue('right-'+r); }
+  addCorner(); for(let c=0;c<N;c++) addClue('bottom-'+c); addCorner();
+}
+function isCl(r,c){return puzzle && puzzle.cl[idx(r,c)]!==undefined}
+function dn(e,r,c){e.preventDefault(); wasDrag=false; drag=true; dragR=r; dragC=c; if(isCl(r,c)||grid[r][c]===SH){drag=false; return;}}
+function en(e,r,c){if(!drag) return; if(r===dragR&&c===dragC) return; e.preventDefault(); wasDrag=true; if(!isCl(r,c)&&grid[r][c]!==SH){grid[r][c]=WA; ren(); autoCheckAfterMove(false);} dragR=r; dragC=c;}
+function cl(e,r,c){e.preventDefault(); e.stopPropagation(); if(wasDrag||isCl(r,c)) return; grid[r][c]=grid[r][c]===EM?WA:grid[r][c]===WA?SH:EM; ren(); autoCheckAfterMove(grid[r][c]===SH);}
+document.addEventListener('mouseup',()=>{drag=false; wasDrag=false;});
+
+function isShipAt(r,c){
+  if(r<0||r>=N||c<0||c>=N) return false;
+  if(!grid || !grid[r]) return false;
+  if(grid[r][c]===SH) return true;
+  if(!puzzle) return false;
+  let clue=puzzle.cl[idx(r,c)];
+  return clue==='s'||clue==='m'||clue==='e';
+}
+function isWaterClosedAt(r,c){
+  if(r<0||r>=N||c<0||c>=N) return true;
+  if(!grid || !grid[r]) return false;
+  if(grid[r][c]===WA) return true;
+  if(!puzzle) return false;
+  return puzzle.cl[idx(r,c)]==='w';
+}
+function findShipComponents(){let vis=new Array(N*N).fill(false), comps=[]; for(let r=0;r<N;r++)for(let c=0;c<N;c++){let k=idx(r,c); if(!isShipAt(r,c)||vis[k])continue; let st=[[r,c]], comp=[]; while(st.length){let [rr,cc]=st.pop(), kk=idx(rr,cc); if(vis[kk]||!isShipAt(rr,cc)) continue; vis[kk]=true; comp.push({r:rr,c:cc}); for(let [nr,nc] of neighbors4(rr,cc)) st.push([nr,nc]);} comps.push(comp);} return comps;}
+function analyzeComponent(comp){
+  let size=comp.length; if(size<1||size>4) return {valid:false};
+  let rows=comp.map(x=>x.r), cols=comp.map(x=>x.c), minR=Math.min(...rows), maxR=Math.max(...rows), minC=Math.min(...cols), maxC=Math.max(...cols);
+  let horizontal=minR===maxR, vertical=minC===maxC; if(!(horizontal||vertical)) return {valid:false};
+  if(horizontal && (maxC-minC+1)!==size) return {valid:false}; if(vertical && (maxR-minR+1)!==size) return {valid:false};
+  let compSet=new Set(comp.map(p=>p.r+','+p.c));
+  for(let cell of comp){
+    for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+      if(dr===0&&dc===0) continue;
+      let nr=cell.r+dr,nc=cell.c+dc;
+      if(nr<0||nr>=N||nc<0||nc>=N) continue;
+      if(!isShipAt(nr,nc)) continue;
+      if(!compSet.has(nr+','+nc)) return {valid:false};
+    }
+  }
+  let complete=true;
+  for(let cell of comp){
+    for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+      if(dr===0&&dc===0) continue;
+      let nr=cell.r+dr,nc=cell.c+dc;
+      if(nr<0||nr>=N||nc<0||nc>=N) continue;
+      if(compSet.has(nr+','+nc)) continue;
+      if(!isWaterClosedAt(nr,nc)) complete=false;
+    }
+  }
+  if(horizontal){
+    let r=minR;
+    if(minC>0 && !isWaterClosedAt(r,minC-1)) complete=false;
+    if(maxC<N-1 && !isWaterClosedAt(r,maxC+1)) complete=false;
+  } else {
+    let c=minC;
+    if(minR>0 && !isWaterClosedAt(minR-1,c)) complete=false;
+    if(maxR<N-1 && !isWaterClosedAt(maxR+1,c)) complete=false;
+  }
+  let hasPlayerShip=comp.some(cell=>grid[cell.r][cell.c]===SH);
+  let hasSingleClue=size===1 && puzzle && puzzle.cl[idx(comp[0].r,comp[0].c)]==='s';
+  let isFragment=!hasPlayerShip && !hasSingleClue;
+  return {valid:true,size,horizontal,vertical,minR,maxR,minC,maxC,complete,isFragment,hasPlayerShip,hasSingleClue};
+}
+function displayType(r,c,a){ if(!a.valid) return 'middle'; if(a.size===1) return 'single'; if(a.horizontal){ if(c===a.minC) return 'end-left'; if(c===a.maxC) return 'end-right'; return 'middle'; } if(r===a.minR) return 'end-up'; if(r===a.maxR) return 'end-down'; return 'middle'; }
+function componentInfo(){ let comps=findShipComponents(), map={}, placed={1:0,2:0,3:0,4:0}, complete={1:0,2:0,3:0,4:0}; for(let comp of comps){ let a=analyzeComponent(comp); if(a.valid && !a.isFragment) placed[a.size]++; if(a.valid&&a.complete&&!a.isFragment) complete[a.size]++; for(let cell of comp) map[cell.r+','+cell.c]={analysis:a,type:displayType(cell.r,cell.c,a),cells:comp}; } return {components:comps,cells:map,placed,complete}; }
+function countRowShips(r){let n=0; for(let c=0;c<N;c++) if(grid[r][c]===SH)n++; return n}
+function countColShips(c){let n=0; for(let r=0;r<N;r++) if(grid[r][c]===SH)n++; return n}
+function countRowFilled(r){let n=0; for(let c=0;c<N;c++) if(grid[r][c]!==EM)n++; return n}
+function countColFilled(c){let n=0; for(let r=0;r<N;r++) if(grid[r][c]!==EM)n++; return n}
+function setClueState(el,state){el.classList.remove('cleared','error'); if(state==='cleared') el.classList.add('cleared'); else if(state==='error') el.classList.add('error')}
+function renderClueShip(el, clueType, i, r, c){ el.className='cell'; if(clueType==='w'){el.classList.add('water','clue-water'); return;} el.classList.add('ship','clue-ship'); let analysis=componentInfo().cells[r+','+c]?.analysis; if(clueType==='s') el.classList.add('ship-single'); else if(clueType==='m') el.classList.add('ship-middle'); else { let left=c>0&&puzzle.grid[i-1]===SH, right=c<N-1&&puzzle.grid[i+1]===SH, up=r>0&&puzzle.grid[i-N]===SH, down=r<N-1&&puzzle.grid[i+N]===SH; if(right)el.classList.add('ship-end-left'); else if(left)el.classList.add('ship-end-right'); else if(down)el.classList.add('ship-end-up'); else if(up)el.classList.add('ship-end-down'); } applyShipLengthClass(el,analysis);}
+function updateShipProgress(info){ let html='<div class="fleet-wrap">'; for(let [size,needed] of FLEET){ let complete=info.complete[size]||0, placed=info.placed[size]||0, exhausted=complete>=needed, over=placed>needed; let cls='fleet-item'+(exhausted?' done':'')+(over?' over':''); html+='<div class="'+cls+'"><span class="dot"></span><strong>'+size+'er</strong> '+complete+'/'+needed+' '+(over?'zu viele':exhausted?'aufgebraucht':'offen')+'</div>'; } html+='</div>'; document.getElementById('ship-progress').innerHTML=html; }
+function updateClueColors(){ for(let i=0;i<N;i++){ let rowState='normal', colState='normal'; if(countRowFilled(i)===N) rowState=countRowShips(i)===puzzle.rc[i]?'cleared':'error'; if(countColFilled(i)===N) colState=countColShips(i)===puzzle.cc[i]?'cleared':'error'; setClueState(document.getElementById('left-'+i),rowState); setClueState(document.getElementById('right-'+i),rowState); setClueState(document.getElementById('top-'+i),colState); setClueState(document.getElementById('bottom-'+i),colState);} }
+function clearShipBadges(){ document.querySelectorAll('.ship-ok-badge,.ship-bad-badge').forEach(el=>el.classList.remove('ship-ok-badge','ship-bad-badge')); if(shipBadgeTimer){ clearTimeout(shipBadgeTimer); shipBadgeTimer=null; } }
+function markShipBadge(cells, ok){ for(let cell of cells){ let el=getCell(cell.r,cell.c); if(!el) continue; el.classList.remove('ship-ok-badge','ship-bad-badge'); el.classList.add(ok?'ship-ok-badge':'ship-bad-badge'); break; } }
+function applyShipLengthClass(el, analysis){ if(!el||!analysis||!analysis.valid) return; el.classList.add('ship-len-'+analysis.size); }
+function evaluateCurrentShips(){ let info=componentInfo(), results=[]; for(let comp of info.components){ let a=analyzeComponent(comp);
+    let wrong = !a.valid || !comp.every(cell=>sol[idx(cell.r,cell.c)]===SH);
+    let completeMatch=false;
+    if(!wrong && a.valid){
+      if(a.horizontal){
+        let row=a.minR;
+        completeMatch=true;
+        for(let c=a.minC;c<=a.maxC;c++) if(sol[idx(row,c)]!==SH) completeMatch=false;
+        if(a.minC>0 && sol[idx(row,a.minC-1)]===SH) completeMatch=false;
+        if(a.maxC<N-1 && sol[idx(row,a.maxC+1)]===SH) completeMatch=false;
+      } else {
+        let col=a.minC;
+        completeMatch=true;
+        for(let r=a.minR;r<=a.maxR;r++) if(sol[idx(r,col)]!==SH) completeMatch=false;
+        if(a.minR>0 && sol[idx(a.minR-1,col)]===SH) completeMatch=false;
+        if(a.maxR<N-1 && sol[idx(a.maxR+1,col)]===SH) completeMatch=false;
+      }
+    }
+    results.push({cells:comp, ok:!wrong && completeMatch && a.complete, partialOk:!wrong, completeMatch});
+  }
+  return {info,results};
+}
+function getCell(r,c){return document.querySelector('.cell[data-r="'+r+'"][data-c="'+c+'"]')}
+
+function ren(){ if(!puzzle) return; let info=componentInfo(); for(let r=0;r<N;r++)for(let c=0;c<N;c++){ let el=getCell(r,c), i=idx(r,c); if(isCl(r,c)){ renderClueShip(el,puzzle.cl[i],i,r,c); continue; } if(grid[r][c]===EM){ el.className='cell empty'; continue; } if(grid[r][c]===WA){ el.className='cell water'; continue; } let inf=info.cells[r+','+c]; el.className='cell ship'; if(inf){ if(inf.analysis.valid&&inf.analysis.complete) el.classList.add('ship-complete'); el.classList.add('ship-'+inf.type); applyShipLengthClass(el,inf.analysis); } else el.classList.add('ship-middle'); }
+  for(let i=0;i<N;i++){ document.getElementById('left-'+i).textContent=puzzle.rc[i]; document.getElementById('right-'+i).textContent=puzzle.rc[i]; document.getElementById('top-'+i).textContent=puzzle.cc[i]; document.getElementById('bottom-'+i).textContent=puzzle.cc[i]; }
+  document.getElementById('ship-info').textContent='Flotte: 1×4er, 2×3er, 3×2er, 4×1er = 20 Schiffssteile';
+  updateShipProgress(info); updateClueColors(); updateTimerDisplay(); }
+function setStatus(t,cls){ let e=document.getElementById('status'); e.textContent=t; e.className=cls||''; }
+function newGame(){ clearShipBadges(); resetTimer(); if(deterministicMode && deterministicFixture){ loadPuzzleFromData(deterministicFixture); return; } setStatus('Generiere solver-geprüftes Rätsel...','info'); setTimeout(()=>{ puzzle=generateBestPuzzle(); if(!puzzle){ setStatus('Fehler beim Generieren eines eindeutig geprüften Rätsels.','err'); return; } loadPuzzleFromData(puzzle); },10); }
+function check(silent){ if(!sol) return; clearShipBadges(); let evalRes=evaluateCurrentShips(); let anyBad=false, anyGood=false; for(let res of evalRes.results){ if(res.ok){ markShipBadge(res.cells,true); anyGood=true; } else if(!res.partialOk){ markShipBadge(res.cells,false); anyBad=true; } }
+  if(anyGood||anyBad){ shipBadgeTimer=setTimeout(()=>clearShipBadges(),2800); }
+  let done=true, ok=true; for(let r=0;r<N;r++)for(let c=0;c<N;c++){ if(isCl(r,c)) continue; if(grid[r][c]===EM){done=false; continue;} let expected=sol[idx(r,c)]===SH?SH:WA; if(grid[r][c]!==expected) ok=false; }
+  if(maybeFinishGame()) return;
+  if(silent) return;
+  if(anyBad){ setStatus(done?'Es gibt noch falsche Schiffe oder Felder.':'Zwischenstand geprüft: Mindestens ein Schiff ist falsch.','err'); return; }
+  if(anyGood){ setStatus(done?'Noch nicht ganz fertig, aber die markierten Schiffe stimmen.':'Zwischenstand geprüft: Markierte Schiffe stimmen bereits.','info'); return; }
+  setStatus(done?'Noch nicht korrekt gelöst.':'Zwischenstand geprüft. Noch keine abgeschlossenen Schiffe zum Bestätigen.','info'); }
+function clearGrid(){ clearShipBadges(); resetTimer(); if(!puzzle) return; for(let r=0;r<N;r++)for(let c=0;c<N;c++) grid[r][c]=EM; ren(); setStatus('Feld geleert.','info'); }
+function hint(){ clearShipBadges(); if(!puzzle||!sol) return; for(let r=0;r<N;r++)for(let c=0;c<N;c++){ if(isCl(r,c)||grid[r][c]!==EM) continue; grid[r][c]=sol[idx(r,c)]===SH?SH:WA; ren(); autoCheckAfterMove(grid[r][c]===SH); setStatus('Tipp aufgedeckt.','info'); return; } setStatus('Kein Tipp mehr möglich.','info'); }
+newGame();
+</script>
+</body>
+</html>
