@@ -1,0 +1,7 @@
+# Harbor generator runtime artifacts
+harbor_*.log
+harbor_*.out
+harbor_*.tmp
+harbor_hard_harvest_state.json
+harbor_hard_top.json
+harbor_hard_candidates.jsonl
