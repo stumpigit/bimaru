@@ -126,7 +126,8 @@
       "chainLength": 3
     },
     "difficulty": "medium",
-    "id": 1
+    "id": 1,
+    "name": "ARCHIPELAGO #3"
   },
   {
     "grid": [
@@ -253,7 +254,8 @@
       "chainLength": 3
     },
     "difficulty": "medium",
-    "id": 2
+    "id": 2,
+    "name": "ARCHIPELAGO #2"
   },
   {
     "grid": [
@@ -386,7 +388,8 @@
       "chainLength": 2
     },
     "difficulty": "easy",
-    "id": 3
+    "id": 3,
+    "name": "ARCHIPELAGO #1"
   },
   {
     "grid": [
@@ -520,7 +523,8 @@
       "chainLength": 3
     },
     "difficulty": "medium",
-    "id": 4
+    "id": 4,
+    "name": "ARCHIPELAGO #5"
   },
   {
     "grid": [
@@ -655,7 +659,8 @@
       "chainLength": 2
     },
     "difficulty": "easy",
-    "id": 5
+    "id": 5,
+    "name": "ARCHIPELAGO #6"
   },
   {
     "id": 6,
