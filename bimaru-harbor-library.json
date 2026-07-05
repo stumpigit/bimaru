@@ -121,9 +121,11 @@
       "solverCalls": 67402,
       "noIslandCalls": 3477,
       "harbor": true,
-      "sampleIndex": 3
+      "sampleIndex": 3,
+      "logicalDepth": 4,
+      "chainLength": 3
     },
-    "difficulty": "hard",
+    "difficulty": "medium",
     "id": 1
   },
   {
@@ -246,9 +248,11 @@
     "meta": {
       "sampleIndex": 2,
       "solverCalls": 51380,
-      "curated": "manual-minimized-2026-07-01"
+      "curated": "manual-minimized-2026-07-01",
+      "logicalDepth": 4,
+      "chainLength": 3
     },
-    "difficulty": "easy",
+    "difficulty": "medium",
     "id": 2
   },
   {
@@ -377,7 +381,9 @@
       "solverCalls": 121336,
       "noIslandCalls": 35975,
       "harbor": true,
-      "sampleIndex": 1
+      "sampleIndex": 1,
+      "logicalDepth": 3,
+      "chainLength": 2
     },
     "difficulty": "easy",
     "id": 3
@@ -509,9 +515,11 @@
       "solverCalls": 102072,
       "noIslandCalls": 81616,
       "harbor": true,
-      "sampleIndex": 5
+      "sampleIndex": 5,
+      "logicalDepth": 4,
+      "chainLength": 3
     },
-    "difficulty": "easy",
+    "difficulty": "medium",
     "id": 4
   },
   {
@@ -642,7 +650,9 @@
       "solverCalls": 82348,
       "noIslandCalls": 42134,
       "harbor": true,
-      "sampleIndex": 6
+      "sampleIndex": 6,
+      "logicalDepth": 3,
+      "chainLength": 2
     },
     "difficulty": "easy",
     "id": 5
@@ -773,9 +783,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 7905,
-      "sampleIndex": 3
+      "sampleIndex": 3,
+      "logicalDepth": 3,
+      "chainLength": 2
     },
-    "difficulty": "expert",
+    "difficulty": "easy",
     "name": "Harbor #4"
   },
   {
@@ -904,9 +916,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 29434,
-      "sampleIndex": 5
+      "sampleIndex": 5,
+      "logicalDepth": 5,
+      "chainLength": 4
     },
-    "difficulty": "expert",
+    "difficulty": "hard",
     "name": "Harbor #6"
   },
   {
@@ -1035,9 +1049,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 3728,
-      "sampleIndex": 6
+      "sampleIndex": 6,
+      "logicalDepth": 3,
+      "chainLength": 3
     },
-    "difficulty": "expert",
+    "difficulty": "easy",
     "name": "Harbor #7"
   },
   {
@@ -1166,9 +1182,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 21275,
-      "sampleIndex": 8
+      "sampleIndex": 8,
+      "logicalDepth": 3,
+      "chainLength": 2
     },
-    "difficulty": "expert",
+    "difficulty": "easy",
     "name": "Harbor #9"
   },
   {
@@ -1297,9 +1315,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 22585,
-      "sampleIndex": 9
+      "sampleIndex": 9,
+      "logicalDepth": 4,
+      "chainLength": 3
     },
-    "difficulty": "expert",
+    "difficulty": "medium",
     "name": "Harbor #10"
   },
   {
@@ -1428,7 +1448,9 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 24890,
-      "sampleIndex": 11
+      "sampleIndex": 11,
+      "logicalDepth": 6,
+      "chainLength": 4
     },
     "difficulty": "expert",
     "name": "Harbor #12"
@@ -1560,7 +1582,9 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 7554,
-      "sampleIndex": 13
+      "sampleIndex": 13,
+      "logicalDepth": 5,
+      "chainLength": 4
     },
     "difficulty": "hard",
     "name": "Harbor #14"
@@ -1692,9 +1716,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 20695,
-      "sampleIndex": 14
+      "sampleIndex": 14,
+      "logicalDepth": 7,
+      "chainLength": 6
     },
-    "difficulty": "hard",
+    "difficulty": "expert",
     "name": "Harbor #15"
   },
   {
@@ -1824,9 +1850,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 29666,
-      "sampleIndex": 16
+      "sampleIndex": 16,
+      "logicalDepth": 4,
+      "chainLength": 3
     },
-    "difficulty": "hard",
+    "difficulty": "medium",
     "name": "Harbor #17"
   },
   {
@@ -1955,9 +1983,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 5788,
-      "sampleIndex": 18
+      "sampleIndex": 18,
+      "logicalDepth": 3,
+      "chainLength": 2
     },
-    "difficulty": "expert",
+    "difficulty": "easy",
     "name": "Harbor #19"
   },
   {
@@ -2086,9 +2116,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 14758,
-      "sampleIndex": 22
+      "sampleIndex": 22,
+      "logicalDepth": 3,
+      "chainLength": 2
     },
-    "difficulty": "expert",
+    "difficulty": "easy",
     "name": "Harbor #23"
   },
   {
@@ -2218,7 +2250,9 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 23688,
-      "sampleIndex": 28
+      "sampleIndex": 28,
+      "logicalDepth": 4,
+      "chainLength": 8
     },
     "difficulty": "hard",
     "name": "Harbor #29"
@@ -2352,7 +2386,9 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 9960,
-      "sampleIndex": 0
+      "sampleIndex": 0,
+      "logicalDepth": 4,
+      "chainLength": 3
     },
     "difficulty": "medium",
     "name": "Harbor #1"
@@ -2485,9 +2521,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 24141,
-      "sampleIndex": 1
+      "sampleIndex": 1,
+      "logicalDepth": 5,
+      "chainLength": 4
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "name": "Harbor #2"
   },
   {
@@ -2618,9 +2656,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 679,
-      "sampleIndex": 2
+      "sampleIndex": 2,
+      "logicalDepth": 5,
+      "chainLength": 4
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "name": "Harbor #3"
   },
   {
@@ -2749,9 +2789,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 18281,
-      "sampleIndex": 4
+      "sampleIndex": 4,
+      "logicalDepth": 3,
+      "chainLength": 2
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #5"
   },
   {
@@ -2882,9 +2924,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 18471,
-      "sampleIndex": 7
+      "sampleIndex": 7,
+      "logicalDepth": 6,
+      "chainLength": 5
     },
-    "difficulty": "medium",
+    "difficulty": "expert",
     "name": "Harbor #8"
   },
   {
@@ -3017,9 +3061,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 29164,
-      "sampleIndex": 10
+      "sampleIndex": 10,
+      "logicalDepth": 3,
+      "chainLength": 2
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #11"
   },
   {
@@ -3151,9 +3197,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 27422,
-      "sampleIndex": 12
+      "sampleIndex": 12,
+      "logicalDepth": 5,
+      "chainLength": 4
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "name": "Harbor #13"
   },
   {
@@ -3284,9 +3332,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 9462,
-      "sampleIndex": 15
+      "sampleIndex": 15,
+      "logicalDepth": 5,
+      "chainLength": 4
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "name": "Harbor #16"
   },
   {
@@ -3415,9 +3465,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 28200,
-      "sampleIndex": 17
+      "sampleIndex": 17,
+      "logicalDepth": 3,
+      "chainLength": 2
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #18"
   },
   {
@@ -3551,9 +3603,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 393,
-      "sampleIndex": 19
+      "sampleIndex": 19,
+      "logicalDepth": 7,
+      "chainLength": 6
     },
-    "difficulty": "medium",
+    "difficulty": "expert",
     "name": "Harbor #20"
   },
   {
@@ -3684,7 +3738,9 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 26101,
-      "sampleIndex": 20
+      "sampleIndex": 20,
+      "logicalDepth": 4,
+      "chainLength": 3
     },
     "difficulty": "medium",
     "name": "Harbor #21"
@@ -3815,9 +3871,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 1382,
-      "sampleIndex": 21
+      "sampleIndex": 21,
+      "logicalDepth": 3,
+      "chainLength": 2
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #22"
   },
   {
@@ -3949,9 +4007,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 7724,
-      "sampleIndex": 23
+      "sampleIndex": 23,
+      "logicalDepth": 6,
+      "chainLength": 7
     },
-    "difficulty": "medium",
+    "difficulty": "expert",
     "name": "Harbor #24"
   },
   {
@@ -4081,9 +4141,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 22183,
-      "sampleIndex": 24
+      "sampleIndex": 24,
+      "logicalDepth": 4,
+      "chainLength": 5
     },
-    "difficulty": "medium",
+    "difficulty": "hard",
     "name": "Harbor #25"
   },
   {
@@ -4212,9 +4274,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 5815,
-      "sampleIndex": 25
+      "sampleIndex": 25,
+      "logicalDepth": 3,
+      "chainLength": 2
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #26"
   },
   {
@@ -4343,9 +4407,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 22194,
-      "sampleIndex": 26
+      "sampleIndex": 26,
+      "logicalDepth": 2,
+      "chainLength": 1
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #27"
   },
   {
@@ -4479,7 +4545,9 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 3144,
-      "sampleIndex": 27
+      "sampleIndex": 27,
+      "logicalDepth": 4,
+      "chainLength": 3
     },
     "difficulty": "medium",
     "name": "Harbor #28"
@@ -4613,9 +4681,11 @@
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 25358,
-      "sampleIndex": 29
+      "sampleIndex": 29,
+      "logicalDepth": 3,
+      "chainLength": 2
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #30"
   }
 ]

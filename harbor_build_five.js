@@ -1,6 +1,7 @@
 const fs = require('fs');
-
-const html = fs.readFileSync('/root/workspace/bimaru/bimaru-harbor.html', 'utf8');
+const path = require('path');
+const hw = path.join(__dirname, 'bimaru-harbor.html');
+const html = fs.readFileSync(hw, 'utf8');
 let js = html.match(/<script>([\s\S]*)<\/script>/)[1];
 js = js.replace("document.addEventListener('mouseup',()=>{drag=false; wasDrag=false;});", '');
 js = js.replace('newGame();', '');

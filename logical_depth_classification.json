@@ -1,0 +1,352 @@
+[
+  {
+    "id": 1,
+    "name": "Puzzle 1",
+    "originalDifficulty": "hard",
+    "logicalDepth": 4,
+    "chainLength": 3,
+    "needsBacktracking": true,
+    "newDifficulty": "medium",
+    "clueCount": 5
+  },
+  {
+    "id": 2,
+    "name": "Puzzle 2",
+    "originalDifficulty": "easy",
+    "logicalDepth": 4,
+    "chainLength": 3,
+    "needsBacktracking": true,
+    "newDifficulty": "medium",
+    "clueCount": 9
+  },
+  {
+    "id": 3,
+    "name": "Puzzle 3",
+    "originalDifficulty": "easy",
+    "logicalDepth": 3,
+    "chainLength": 2,
+    "needsBacktracking": false,
+    "newDifficulty": "easy",
+    "clueCount": 9
+  },
+  {
+    "id": 4,
+    "name": "Puzzle 4",
+    "originalDifficulty": "easy",
+    "logicalDepth": 4,
+    "chainLength": 3,
+    "needsBacktracking": true,
+    "newDifficulty": "medium",
+    "clueCount": 10
+  },
+  {
+    "id": 5,
+    "name": "Puzzle 5",
+    "originalDifficulty": "easy",
+    "logicalDepth": 3,
+    "chainLength": 2,
+    "needsBacktracking": false,
+    "newDifficulty": "easy",
+    "clueCount": 11
+  },
+  {
+    "id": 6,
+    "name": "Puzzle 6",
+    "originalDifficulty": "expert",
+    "logicalDepth": 3,
+    "chainLength": 2,
+    "needsBacktracking": false,
+    "newDifficulty": "easy",
+    "clueCount": 6
+  },
+  {
+    "id": 7,
+    "name": "Puzzle 7",
+    "originalDifficulty": "expert",
+    "logicalDepth": 5,
+    "chainLength": 4,
+    "needsBacktracking": true,
+    "newDifficulty": "hard",
+    "clueCount": 6
+  },
+  {
+    "id": 8,
+    "name": "Puzzle 8",
+    "originalDifficulty": "expert",
+    "logicalDepth": 3,
+    "chainLength": 3,
+    "needsBacktracking": false,
+    "newDifficulty": "easy",
+    "clueCount": 6
+  },
+  {
+    "id": 9,
+    "name": "Puzzle 9",
+    "originalDifficulty": "expert",
+    "logicalDepth": 3,
+    "chainLength": 2,
+    "needsBacktracking": false,
+    "newDifficulty": "easy",
+    "clueCount": 6
+  },
+  {
+    "id": 10,
+    "name": "Puzzle 10",
+    "originalDifficulty": "expert",
+    "logicalDepth": 4,
+    "chainLength": 3,
+    "needsBacktracking": true,
+    "newDifficulty": "medium",
+    "clueCount": 6
+  },
+  {
+    "id": 11,
+    "name": "Puzzle 11",
+    "originalDifficulty": "expert",
+    "logicalDepth": 6,
+    "chainLength": 4,
+    "needsBacktracking": true,
+    "newDifficulty": "expert",
+    "clueCount": 6
+  },
+  {
+    "id": 12,
+    "name": "Puzzle 12",
+    "originalDifficulty": "hard",
+    "logicalDepth": 5,
+    "chainLength": 4,
+    "needsBacktracking": true,
+    "newDifficulty": "hard",
+    "clueCount": 7
+  },
+  {
+    "id": 13,
+    "name": "Puzzle 13",
+    "originalDifficulty": "hard",
+    "logicalDepth": 7,
+    "chainLength": 6,
+    "needsBacktracking": false,
+    "newDifficulty": "expert",
+    "clueCount": 7
+  },
+  {
+    "id": 14,
+    "name": "Puzzle 14",
+    "originalDifficulty": "hard",
+    "logicalDepth": 4,
+    "chainLength": 3,
+    "needsBacktracking": false,
+    "newDifficulty": "medium",
+    "clueCount": 7
+  },
+  {
+    "id": 15,
+    "name": "Puzzle 15",
+    "originalDifficulty": "expert",
+    "logicalDepth": 3,
+    "chainLength": 2,
+    "needsBacktracking": false,
+    "newDifficulty": "easy",
+    "clueCount": 6
+  },
+  {
+    "id": 16,
+    "name": "Puzzle 16",
+    "originalDifficulty": "expert",
+    "logicalDepth": 3,
+    "chainLength": 2,
+    "needsBacktracking": true,
+    "newDifficulty": "easy",
+    "clueCount": 6
+  },
+  {
+    "id": 17,
+    "name": "Puzzle 17",
+    "originalDifficulty": "hard",
+    "logicalDepth": 4,
+    "chainLength": 8,
+    "needsBacktracking": true,
+    "newDifficulty": "hard",
+    "clueCount": 7
+  },
+  {
+    "id": 18,
+    "name": "Puzzle 18",
+    "originalDifficulty": "medium",
+    "logicalDepth": 4,
+    "chainLength": 3,
+    "needsBacktracking": true,
+    "newDifficulty": "medium",
+    "clueCount": 9
+  },
+  {
+    "id": 19,
+    "name": "Puzzle 19",
+    "originalDifficulty": "medium",
+    "logicalDepth": 5,
+    "chainLength": 4,
+    "needsBacktracking": true,
+    "newDifficulty": "hard",
+    "clueCount": 8
+  },
+  {
+    "id": 20,
+    "name": "Puzzle 20",
+    "originalDifficulty": "medium",
+    "logicalDepth": 5,
+    "chainLength": 4,
+    "needsBacktracking": true,
+    "newDifficulty": "hard",
+    "clueCount": 8
+  },
+  {
+    "id": 21,
+    "name": "Puzzle 21",
+    "originalDifficulty": "medium",
+    "logicalDepth": 3,
+    "chainLength": 2,
+    "needsBacktracking": false,
+    "newDifficulty": "easy",
+    "clueCount": 6
+  },
+  {
+    "id": 22,
+    "name": "Puzzle 22",
+    "originalDifficulty": "medium",
+    "logicalDepth": 6,
+    "chainLength": 5,
+    "needsBacktracking": true,
+    "newDifficulty": "expert",
+    "clueCount": 8
+  },
+  {
+    "id": 23,
+    "name": "Puzzle 23",
+    "originalDifficulty": "medium",
+    "logicalDepth": 3,
+    "chainLength": 2,
+    "needsBacktracking": false,
+    "newDifficulty": "easy",
+    "clueCount": 10
+  },
+  {
+    "id": 24,
+    "name": "Puzzle 24",
+    "originalDifficulty": "medium",
+    "logicalDepth": 5,
+    "chainLength": 4,
+    "needsBacktracking": false,
+    "newDifficulty": "hard",
+    "clueCount": 9
+  },
+  {
+    "id": 25,
+    "name": "Puzzle 25",
+    "originalDifficulty": "medium",
+    "logicalDepth": 5,
+    "chainLength": 4,
+    "needsBacktracking": false,
+    "newDifficulty": "hard",
+    "clueCount": 8
+  },
+  {
+    "id": 26,
+    "name": "Puzzle 26",
+    "originalDifficulty": "medium",
+    "logicalDepth": 3,
+    "chainLength": 2,
+    "needsBacktracking": true,
+    "newDifficulty": "easy",
+    "clueCount": 6
+  },
+  {
+    "id": 27,
+    "name": "Puzzle 27",
+    "originalDifficulty": "medium",
+    "logicalDepth": 7,
+    "chainLength": 6,
+    "needsBacktracking": false,
+    "newDifficulty": "expert",
+    "clueCount": 11
+  },
+  {
+    "id": 28,
+    "name": "Puzzle 28",
+    "originalDifficulty": "medium",
+    "logicalDepth": 4,
+    "chainLength": 3,
+    "needsBacktracking": true,
+    "newDifficulty": "medium",
+    "clueCount": 8
+  },
+  {
+    "id": 29,
+    "name": "Puzzle 29",
+    "originalDifficulty": "medium",
+    "logicalDepth": 3,
+    "chainLength": 2,
+    "needsBacktracking": false,
+    "newDifficulty": "easy",
+    "clueCount": 6
+  },
+  {
+    "id": 30,
+    "name": "Puzzle 30",
+    "originalDifficulty": "medium",
+    "logicalDepth": 6,
+    "chainLength": 7,
+    "needsBacktracking": false,
+    "newDifficulty": "expert",
+    "clueCount": 9
+  },
+  {
+    "id": 31,
+    "name": "Puzzle 31",
+    "originalDifficulty": "medium",
+    "logicalDepth": 4,
+    "chainLength": 5,
+    "needsBacktracking": true,
+    "newDifficulty": "hard",
+    "clueCount": 7
+  },
+  {
+    "id": 32,
+    "name": "Puzzle 32",
+    "originalDifficulty": "medium",
+    "logicalDepth": 3,
+    "chainLength": 2,
+    "needsBacktracking": true,
+    "newDifficulty": "easy",
+    "clueCount": 6
+  },
+  {
+    "id": 33,
+    "name": "Puzzle 33",
+    "originalDifficulty": "medium",
+    "logicalDepth": 2,
+    "chainLength": 1,
+    "needsBacktracking": false,
+    "newDifficulty": "easy",
+    "clueCount": 6
+  },
+  {
+    "id": 34,
+    "name": "Puzzle 34",
+    "originalDifficulty": "medium",
+    "logicalDepth": 4,
+    "chainLength": 3,
+    "needsBacktracking": true,
+    "newDifficulty": "medium",
+    "clueCount": 11
+  },
+  {
+    "id": 35,
+    "name": "Puzzle 35",
+    "originalDifficulty": "medium",
+    "logicalDepth": 3,
+    "chainLength": 2,
+    "needsBacktracking": false,
+    "newDifficulty": "easy",
+    "clueCount": 9
+  }
+]

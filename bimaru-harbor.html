@@ -1151,7 +1151,9 @@ function renderPuzzleCards(diff){
     if(p.cl){for(var k in p.cl){if(typeof p.cl[k]==='string'&&p.cl[k].startsWith('i'))islandCount++;}}
     var bridgeCount=m.harborBridgeCount||0;
     var score=m.score!=null?' Score: '+m.score:'';
-    html+='<div class="puzzle-card"><div class="puzzle-card-header"><span class="puzzle-diff '+p.difficulty+'" data-diff="'+p.difficulty+'">'+difficultyLabel(p.difficulty)+'</span><span style="font-size:.72rem;color:var(--muted)">ID '+p.id+'</span></div><div style="font-size:.82rem;font-weight:600">'+name+'</div><div class="puzzle-stats"><span>Clues: '+clueCount+'</span><span>Inseln: '+islandCount+'</span><span>Brücken: '+bridgeCount+'</span>'+score+'</div><button class="puzzle-load" onclick="loadPuzzleById('+p.id+')">Laden</button></div>';
+    var depth=p.meta?.logicalDepth||0, chain=p.meta?.chainLength||0;
+    var depthStr=depth?' Tiefe: '+depth:'', chainStr=chain?' Kette: '+chain:'';
+    html+='<div class="puzzle-card"><div class="puzzle-card-header"><span class="puzzle-diff '+p.difficulty+'" data-diff="'+p.difficulty+'">'+difficultyLabel(p.difficulty)+'</span><span style="font-size:.72rem;color:var(--muted)">ID '+p.id+'</span></div><div style="font-size:.82rem;font-weight:600">'+name+'</div><div class="puzzle-stats"><span>Clues: '+clueCount+'</span><span>Inseln: '+islandCount+'</span><span>Brücken: '+bridgeCount+'</span>'+score+depthStr+chainStr+'</div><button class="puzzle-load" onclick="loadPuzzleById('+p.id+')">Laden</button></div>';
   }
   list.innerHTML=html;
 }
@@ -1196,10 +1198,10 @@ function randomPuzzle(){
     <div class="count-badge" id="count-badge"></div>
     <div class="diff-filter" id="diff-filter">
       <button class="active" data-diff="all" onclick="filterPuzzles('all')">Alle (35)</button>
-      <button data-diff="easy" onclick="filterPuzzles('easy')">⭐ Easy (4)</button>
-      <button data-diff="medium" onclick="filterPuzzles('medium')">⭐⭐ Medium (18)</button>
-      <button data-diff="hard" onclick="filterPuzzles('hard')">⭐⭐⭐ Hard (5)</button>
-      <button data-diff="expert" onclick="filterPuzzles('expert')">⭐⭐⭐⭐ Expert (8)</button>
+      <button data-diff="easy" onclick="filterPuzzles('easy')">⭐ Easy (14)</button>
+      <button data-diff="medium" onclick="filterPuzzles('medium')">⭐⭐ Medium (8)</button>
+      <button data-diff="hard" onclick="filterPuzzles('hard')">⭐⭐⭐ Hard (8)</button>
+      <button data-diff="expert" onclick="filterPuzzles('expert')">⭐⭐⭐⭐ Expert (5)</button>
     </div>
     <div class="puzzle-list" id="puzzle-list"></div>
   </div>

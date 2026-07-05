@@ -1,9 +1,11 @@
 const fs = require('fs');
 const path = require('path');
 
-const html = fs.readFileSync('/root/workspace/bimaru/bimaru-harbor.html', 'utf8');
+const html = fs.readFileSync(path.join(__dirname, 'bimaru-harbor.html'), 'utf8');
 let js = html.match(/<script>([\s\S]*)<\/script>/)[1];
 js = js.replace("document.addEventListener('mouseup',()=>{drag=false; wasDrag=false;});", '');
+js = js.replace('newGame();', '');
+// Remove the second newGame(); at the end of the script
 js = js.replace('newGame();', '');
 
 const bootstrap = `

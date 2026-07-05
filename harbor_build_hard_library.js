@@ -1,6 +1,7 @@
 const fs = require('fs');
-const path = '/root/workspace/bimaru/bimaru-harbor.html';
-const html = fs.readFileSync(path, 'utf8');
+const path = require('path');
+const hw = path.join(__dirname, 'bimaru-harbor.html');
+const html = fs.readFileSync(hw, 'utf8');
 let js = html.match(/<script>([\s\S]*)<\/script>/)[1];
 js = js.replace("document.addEventListener('mouseup',()=>{drag=false; wasDrag=false;});", '');
 js = js.replace(/newGame\(\);\s*$/, '');
@@ -73,8 +74,8 @@ function cmpRank(a,b){
 
 const target = Number(process.argv[2] || 5);
 const maxAttempts = Number(process.argv[3] || 12);
-const outPath = '/root/workspace/bimaru/harbor_hard_library.json';
-const logPath = '/root/workspace/bimaru/harbor_hard_library.log';
+const outPath = path.join(__dirname, 'harbor_hard_library.json');
+const logPath = path.join(__dirname, 'harbor_hard_library.log');
 fs.writeFileSync(logPath, '');
 const chosen = [];
 const seen = new Set();
