@@ -2,19 +2,33 @@
 /**
  * logical_depth_score.js
  *
- * Measures "logical depth" of Bimaru Harbor puzzles via constraint propagation.
+ * Measures "logical depth" of Bimaru Harbor puzzles via a decision-tree approach.
+ * Simulates solving by running deduction rounds, then uses proof-by-contradiction
+ * and backtracking to determine cells that require forward reasoning.
+ *
+ * Depth model:
+ *   Depth 1: Directly deducible from initial clues
+ *   Depth 2: Deduced from depth-1 deductions (one chain step)
+ *   Depth N: Deduced from depth-(N-1) deductions (N-1 chain steps)
+ *   Depth N+: Requires proof-by-contradiction or backtracking
  */
+
+'use strict';
 
 const fs = require('fs');
 const path = require('path');
 
 const N = 9;
 const UNKNOWN = 0, SHIP = 1, WATER = -1;
-const FLEET = { 4: 1, 3: 2, 2: 3, 1: 4 };
+
+// ---------------------------------------------------------------------------
+// Cell helpers
+// ---------------------------------------------------------------------------
 
 function idx(r, c) { return r * N + c; }
 function rowOf(i) { return Math.floor(i / N); }
 function colOf(i) { return i % N; }
+
 function orthNeighbors(r, c) {
   const n = [];
   if (c > 0) n.push([r, c - 1]);
@@ -23,58 +37,276 @@ function orthNeighbors(r, c) {
   if (r < N - 1) n.push([r + 1, c]);
   return n;
 }
-function isIslandClue(t) { return typeof t === 'string' && /^i\d$/.test(t); }
+
+function isIslandClue(t) { return typeof t === 'string' && /^i\d+$/.test(t); }
 function islandTarget(t) { return Number(t.slice(1)); }
 
-// ===========================================================================
-// Utilities
-// ===========================================================================
+// ---------------------------------------------------------------------------
+// Deduction engine
+// ---------------------------------------------------------------------------
 
-function remainingFleet(grid) {
-  const cnt = { 1: 0, 2: 0, 3: 0, 4: 0 };
-  const vis = new Array(N * N).fill(false);
-  for (let r = 0; r < N; r++) {
-    for (let c = 0; c < N; c++) {
-      const i = idx(r, c);
-      if (grid[i] !== SHIP || vis[i]) continue;
-      const cells = [];
-      const stk = [[r, c]];
-      while (stk.length) {
-        const [cr, cc] = stk.pop(), ci = idx(cr, cc);
-        if (vis[ci] || grid[ci] !== SHIP) continue;
-        vis[ci] = true; cells.push([cr, cc]);
-        for (const [nr, nc] of orthNeighbors(cr, cc)) {
-          const ni = idx(nr, nc);
-          if (!vis[ni] && grid[ni] === SHIP) stk.push([nr, nc]);
+/**
+ * A single reasoning step.
+ */
+class Deduction {
+  constructor(cell, state, depth, reason, dependsOn) {
+    this.cell = cell;
+    this.state = state;
+    this.depth = depth;
+    this.reason = reason;
+    this.dependsOn = dependsOn || []; // indices of other deductions this depends on
+  }
+}
+
+/**
+ * Run all direct deduction rules until no more deductions are possible.
+ *
+ * The function works on a partially-determined grid.  Cells already set
+ * (to SHIP or WATER) are treated as known; UNKNOWN cells are candidates.
+ *
+ * Each deduction is assigned a depth: 1 + max depth of cells it depends on.
+ * Direct deductions from the initial clue-set have depth 1.
+ *
+ * @param {number[]} grid - Partially determined grid (UNKNOWN/SHIP/WATER)
+ * @param {number[]} rc   - Row ship counts
+ * @param {number[]} cc   - Column ship counts
+ * @param {object}   cl   - Clue map: cellIndex → 's'|'e'|'m'|'w'|'iN'
+ * @param {object}   opts - { knownDepths: Map<cell,depth>, maxDepth: number }
+ * @returns {{ grid: number[], deductions: Deduction[], rounds: number, solved: boolean }}
+ */
+function runDeductionRound(grid, rc, cl, cc, opts) {
+  const { knownDepths = new Map(), maxDepth = 0 } = opts;
+  const newDeductions = [];
+  const newDepths = new Map(knownDepths);
+  const newStates = [];
+
+  function addDeduction(cell, state, depth, reason) {
+    if (grid[cell] !== UNKNOWN) return;
+    const depOn = [];
+    let maxDep = 0;
+
+    switch (reason) {
+      case 'island_area':
+        // Depends on clue-level knowledge (depth 0 cells)
+        for (const [k, v] of knownDepths) {
+          if (v === 0) depOn.push(k);
         }
-      }
-      if (cells.length >= 1 && cells.length <= 4) cnt[cells.length]++;
+        break;
+      case 'adj_water':
+        for (const [k, v] of knownDepths) {
+          if (grid[k] === SHIP && v > maxDep) { maxDep = v; depOn.push(k); }
+        }
+        break;
+      case 'row_count':
+      case 'col_count':
+        for (const [k, v] of knownDepths) {
+          if (grid[k] !== UNKNOWN && v > maxDep) { maxDep = v; depOn.push(k); }
+        }
+        break;
+      case 'island_neighbor':
+      case 'component_water':
+        for (const [k, v] of knownDepths) {
+          if (grid[k] !== UNKNOWN && v > maxDep) { maxDep = v; depOn.push(k); }
+        }
+        break;
+      default:
+        // 'ship_type_s', 'ship_type_e', 'ship_type_m', 'line_analysis'
+        for (const [k, v] of knownDepths) {
+          if (grid[k] !== UNKNOWN && v > maxDep) { maxDep = v; depOn.push(k); }
+        }
+    }
+
+    const deductionDepth = maxDep + 1;
+    newDeductions.push(new Deduction(cell, state, deductionDepth, reason, depOn));
+    newStates.push([cell, state]);
+    newDepths.set(cell, deductionDepth);
+  }
+
+  // --- Rule 1: Island area cells are water ---
+  for (const [cellStr, clue] of Object.entries(cl)) {
+    if (isIslandClue(clue)) {
+      const cell = Number(cellStr);
+      addDeduction(cell, WATER, 0, 'island_area');
     }
   }
-  const rem = {};
-  for (const l of Object.keys(FLEET)) rem[+l] = Math.max(0, FLEET[+l] - cnt[+l]);
-  return rem;
+
+  // --- Rule 2: Ship type clues ---
+  for (const [cellStr, clue] of Object.entries(cl)) {
+    if (clue === 's' && grid[+cellStr] === SHIP) {
+      const r = rowOf(+cellStr), c = colOf(+cellStr);
+      for (const [nr, nc] of orthNeighbors(r, c)) addDeduction(idx(nr, nc), WATER, 0, 'ship_type_s');
+    }
+    if (clue === 'e' && grid[+cellStr] === SHIP) {
+      const r = rowOf(+cellStr), c = colOf(+cellStr);
+      let knownShip = 0, unknowns = [];
+      for (const [nr, nc] of orthNeighbors(r, c)) {
+        const ni = idx(nr, nc);
+        if (grid[ni] === SHIP) knownShip++;
+        else if (grid[ni] === UNKNOWN) unknowns.push([nr, nc]);
+      }
+      if (knownShip === 1) for (const [nr, nc] of unknowns) addDeduction(idx(nr, nc), WATER, 0, 'ship_type_e');
+    }
+    if (clue === 'm' && grid[+cellStr] === SHIP) {
+      const r = rowOf(+cellStr), c = colOf(+cellStr);
+      const shipN = [], unN = [];
+      for (const [nr, nc] of orthNeighbors(r, c)) {
+        const ni = idx(nr, nc);
+        if (grid[ni] === SHIP) shipN.push([nr, nc]);
+        else if (grid[ni] === UNKNOWN) unN.push([nr, nc]);
+      }
+      if (shipN.length === 2) {
+        const [a, b] = [shipN[0], shipN[1]];
+        if (a[0] === b[0] || a[1] === b[1]) for (const [nr, nc] of unN) addDeduction(idx(nr, nc), WATER, 0, 'ship_type_m');
+      }
+    }
+  }
+
+  // --- Rule 3: Adjacency water ---
+  for (let r = 0; r < N; r++) {
+    for (let c = 0; c < N; c++) {
+      if (grid[idx(r, c)] === SHIP) {
+        for (const [nr, nc] of orthNeighbors(r, c)) addDeduction(idx(nr, nc), WATER, 0, 'adj_water');
+      }
+    }
+  }
+
+  // --- Rule 4: Component-based water ---
+  const comps = findShipComponents(grid);
+  for (const cell of getWaterFromComponents(comps)) {
+    addDeduction(cell, WATER, 0, 'component_water');
+  }
+
+  // --- Rule 5: Island neighbor constraint ---
+  for (const [cellStr, clue] of Object.entries(cl)) {
+    if (!isIslandClue(clue)) continue;
+    const cell = +cellStr;
+    const ir = rowOf(cell), ic = colOf(cell);
+    const target = islandTarget(clue);
+    let knownShips = 0, unknowns = [];
+    for (const [nr, nc] of orthNeighbors(ir, ic)) {
+      const ni = idx(nr, nc);
+      if (grid[ni] === SHIP) knownShips++;
+      else if (grid[ni] === UNKNOWN) unknowns.push([nr, nc]);
+    }
+    if (knownShips + unknowns.length < target) continue;
+    if (knownShips + unknowns.length === target && knownShips < target) {
+      for (const [nr, nc] of unknowns) addDeduction(idx(nr, nc), SHIP, 0, 'island_neighbor');
+    }
+    if (knownShips === target) {
+      for (const [nr, nc] of unknowns) addDeduction(idx(nr, nc), WATER, 0, 'island_neighbor');
+    }
+  }
+
+  // --- Rule 6: Row / column forced by count ---
+  for (let r = 0; r < N; r++) {
+    let ships = 0, unknowns = [];
+    for (let c = 0; c < N; c++) {
+      const cell = idx(r, c);
+      if (grid[cell] === SHIP) ships++;
+      else if (grid[cell] === UNKNOWN) unknowns.push(c);
+    }
+    const needed = (rc[r] || 0) - ships;
+    if (needed === unknowns.length && needed >= 0)
+      for (const c of unknowns) addDeduction(idx(r, c), SHIP, 0, 'row_count');
+    else if (needed === 0)
+      for (const c of unknowns) addDeduction(idx(r, c), WATER, 0, 'row_count');
+  }
+
+  for (let c = 0; c < N; c++) {
+    let ships = 0, unknowns = [];
+    for (let r = 0; r < N; r++) {
+      const cell = idx(r, c);
+      if (grid[cell] === SHIP) ships++;
+      else if (grid[cell] === UNKNOWN) unknowns.push(r);
+    }
+    const needed = (cc[c] || 0) - ships;
+    if (needed === unknowns.length && needed >= 0)
+      for (const r of unknowns) addDeduction(idx(r, c), SHIP, 0, 'col_count');
+    else if (needed === 0)
+      for (const r of unknowns) addDeduction(idx(r, c), WATER, 0, 'col_count');
+  }
+
+  // --- Rule 7: Line analysis with fleet constraint (depth 0 → gets depth from deps) ---
+  const fleet = remainingFleetCount(grid, rc, cc);
+  const lineAnalysisResults = analyzeAllLines(grid, rc, cc, cl, fleet);
+
+  for (const { cell, state, reason } of lineAnalysisResults) {
+    addDeduction(cell, state, 0, reason);
+  }
+
+  // --- Apply all deductions ---
+  for (const [cell, state] of newStates) {
+    grid[cell] = state;
+  }
+
+  const solved = grid.every(v => v !== UNKNOWN);
+
+  return { grid, deductions: newDeductions, newDepths, solved };
 }
+
+/**
+ * Iteratively run deduction rounds until stable.
+ * Returns the full deduction history with depths.
+ */
+function runDeductions(grid, rc, cl, cc, knownDepths) {
+  let allDeductions = [];
+  let currentGrid = new Array(N * N);
+  for (let i = 0; i < grid.length; i++) currentGrid[i] = grid[i];
+
+  let rounds = 0;
+  let changed = true;
+
+  while (changed) {
+    rounds++;
+    changed = false;
+
+    const { grid: newGrid, deductions, newDepths, solved } =
+      runDeductionRound(currentGrid, rc, cl, cc, { knownDepths, maxDepth: 0 });
+
+    // Calculate actual depths for this round
+    for (const d of deductions) {
+      d.depth = Math.max(1, ...d.dependsOn.map(k => knownDepths.get(k) || 0)) + 1;
+    }
+
+    allDeductions.push(...deductions);
+    for (const dep of newDepths) knownDepths.set(dep[0], dep[1]);
+
+    for (let i = 0; i < newGrid.length; i++) currentGrid[i] = newGrid[i];
+
+    changed = deductions.length > 0;
+    if (solved) changed = false;
+  }
+
+  const solved = currentGrid.every(v => v !== UNKNOWN);
+  return { grid: currentGrid, deductions: allDeductions, knownDepths, rounds, solved };
+}
+
+// ---------------------------------------------------------------------------
+// Component analysis
+// ---------------------------------------------------------------------------
 
 function findShipComponents(grid) {
   const comps = [];
   const vis = new Array(N * N).fill(false);
   for (let r = 0; r < N; r++) {
     for (let c = 0; c < N; c++) {
-      const i = idx(r, c);
-      if (grid[i] !== SHIP || vis[i]) continue;
+      const cell = idx(r, c);
+      if (grid[cell] !== SHIP || vis[cell]) continue;
       const cells = [];
       const stk = [[r, c]];
       while (stk.length) {
         const [cr, cc] = stk.pop(), ci = idx(cr, cc);
         if (vis[ci] || grid[ci] !== SHIP) continue;
-        vis[ci] = true; cells.push([cr, cc]);
+        vis[ci] = true;
+        cells.push({ r: cr, c: cc });
         for (const [nr, nc] of orthNeighbors(cr, cc)) {
           const ni = idx(nr, nc);
           if (!vis[ni] && grid[ni] === SHIP) stk.push([nr, nc]);
         }
       }
-      comps.push(new Set(cells.map(([cr, cc]) => idx(cr, cc))));
+      if (cells.length >= 1 && cells.length <= 4) {
+        comps.push(new Set(cells.map(p => idx(p.r, p.c))));
+      }
     }
   }
   return comps;
@@ -96,96 +328,114 @@ function getWaterFromComponents(comps) {
     for (const cell of arr) {
       for (const [nr, nc] of orthNeighbors(cell.r, cell.c)) {
         const ni = idx(nr, nc);
-        if (!comp.has(ni) && !seen.has(ni)) { waters.push([nr, nc]); seen.add(ni); }
+        if (!comp.has(ni) && !seen.has(ni)) { waters.push(ni); seen.add(ni); }
       }
     }
   }
   return waters;
 }
 
-function diagAllowed(cl, r1, c1, r2, c2) {
-  if (Math.abs(r1 - r2) !== 1 || Math.abs(c1 - c2) !== 1) return false;
-  return isIslandClue(cl[idx(r1, c2)]) || isIslandClue(cl[idx(r2, c1)]);
+// ---------------------------------------------------------------------------
+// Fleet helpers
+// ---------------------------------------------------------------------------
+
+function remainingFleetCount(grid, rc, cc) {
+  const comps = findShipComponents(grid);
+  const placed = {};
+  for (const comp of comps) {
+    const sz = comp.size;
+    placed[sz] = (placed[sz] || 0) + 1;
+  }
+  // Fleet: 1×4, 2×3, 3×2, 4×1 (total = 4+6+6+4 = 20 ships)
+  const total = { 4: 1, 3: 2, 2: 3, 1: 4 };
+  const rem = {};
+  for (const l of [4, 3, 2, 1]) rem[l] = Math.max(0, (total[l] || 0) - (placed[l] || 0));
+  return rem;
 }
 
-// ===========================================================================
-// Line analysis: enumerate valid placements, compute consensus
-// ===========================================================================
+// ---------------------------------------------------------------------------
+// Line analysis with fleet constraints
+// ---------------------------------------------------------------------------
 
-/**
- * Enumerate all valid segment placements for one row or column.
- */
-function enumerateLinePlacements(line, target, fleet, cl, grid, lineIdx, isRow) {
+function analyzeAllLines(grid, rc, cc, cl, fleet) {
   const results = [];
 
-  function rec(pos, segs, shipCount, fleetState) {
-    if (shipCount === target) {
-      // Validate diagonal constraints
-      const segCells = new Set();
-      for (const seg of segs) {
-        for (let j = seg.start; j < seg.start + seg.len; j++) {
-          if (isRow) segCells.add(idx(lineIdx, j));
-          else segCells.add(idx(j, lineIdx));
-        }
-      }
-      let ok = true;
-      for (const ci of segCells) {
-        const r = rowOf(ci), c = colOf(ci);
-        for (const [dr, dc] of [[-1,-1],[-1,1],[1,-1],[1,1]]) {
-          const nr = r + dr, nc = c + dc;
-          if (nr < 0 || nr >= N || nc < 0 || nc >= N) continue;
-          const ni = idx(nr, nc);
-          if (grid[ni] === SHIP && !segCells.has(ni)) {
-            if (!diagAllowed(cl, r, c, nr, nc)) { ok = false; break; }
-          }
-        }
-        if (!ok) break;
-      }
-      // Validate ship-type clues
-      if (ok) {
-        for (const key of Object.keys(cl)) {
-          const k = +key, t = cl[key];
-          if (t !== 's' && t !== 'e' && t !== 'm') continue;
-          const inLine = isRow ? rowOf(k) === lineIdx : colOf(k) === lineIdx;
-          if (!inLine) continue;
-          const r = rowOf(k), c = colOf(k);
-          if (!segCells.has(k)) continue;
+  for (let r = 0; r < N; r++) {
+    const line = [];
+    for (let c = 0; c < N; c++) line.push(grid[idx(r, c)]);
+    const ships = line.filter(v => v === SHIP).length;
+    const needed = (rc[r] || 0) - ships;
+    if (needed <= 0) continue;
 
-          if (t === 's') {
-            // Must be size-1 segment
-            const mySeg = segs.find(s => {
-              for (let j = s.start; j < s.start + s.len; j++) {
-                if (isRow ? (lineIdx === r && j === c) : (lineIdx === c && j === r)) return true;
-              }
-              return false;
-            });
-            if (!mySeg || mySeg.len !== 1) { ok = false; break; }
-          } else if (t === 'e') {
-            let sn = 0;
-            for (const [dr, dc] of [[0,-1],[0,1],[-1,0],[1,0]]) {
-              const nr = r+dr, nc = c+dc;
-              if (nr>=0 && nr<N && nc>=0 && nc<N && grid[idx(nr,nc)]===SHIP) sn++;
-            }
-            if (sn !== 1) { ok = false; break; }
-          } else if (t === 'm') {
-            const hL = c>0 && grid[idx(r,c-1)]===SHIP;
-            const hR = c<N-1 && grid[idx(r,c+1)]===SHIP;
-            const vU = r>0 && grid[idx(r-1,c)]===SHIP;
-            const vD = r<N-1 && grid[idx(r+1,c)]===SHIP;
-            if (!((hL&&hR)||(vU&&vD))) { ok = false; break; }
-          }
+    const placements = enumerateLinePlacements(line, needed, fleet, cl, r, true);
+    if (placements.length === 0) continue;
+
+    // Cells in ALL placements → forced ship
+    const allShipCells = new Set();
+    for (const p of placements) { for (const ci of p.cells) allShipCells.add(ci); }
+    for (const ci of allShipCells) {
+      if (grid[ci] !== UNKNOWN) continue;
+      let inAll = true;
+      for (const p of placements) { if (!p.cells.has(ci)) { inAll = false; break; } }
+      if (inAll) results.push({ cell: ci, state: SHIP, reason: 'line_analysis' });
+    }
+
+    // Cells in NO placement among UNKNOWN cells → forced water
+    const usedCells = new Set();
+    for (const p of placements) { for (const ci of p.cells) usedCells.add(ci); }
+    for (let c = 0; c < N; c++) {
+      const ci = idx(r, c);
+      if (grid[ci] === UNKNOWN && !usedCells.has(ci)) {
+        results.push({ cell: ci, state: WATER, reason: 'line_analysis' });
+      }
+    }
+  }
+
+  for (let c = 0; c < N; c++) {
+    const line = [];
+    for (let r = 0; r < N; r++) line.push(grid[idx(r, c)]);
+    const ships = line.filter(v => v === SHIP).length;
+    const needed = (cc[c] || 0) - ships;
+    if (needed <= 0) continue;
+
+    const placements = enumerateLinePlacements(line, needed, fleet, cl, c, false);
+    if (placements.length === 0) continue;
+
+    const allShipCells = new Set();
+    for (const p of placements) { for (const ci of p.cells) allShipCells.add(ci); }
+    for (const ci of allShipCells) {
+      if (grid[ci] !== UNKNOWN) continue;
+      let inAll = true;
+      for (const p of placements) { if (!p.cells.has(ci)) { inAll = false; break; } }
+      if (inAll) results.push({ cell: ci, state: SHIP, reason: 'line_analysis' });
+    }
+
+    const usedCells = new Set();
+    for (const p of placements) { for (const ci of p.cells) usedCells.add(ci); }
+    for (let r = 0; r < N; r++) {
+      const ci = idx(r, c);
+      if (grid[ci] === UNKNOWN && !usedCells.has(ci)) {
+        results.push({ cell: ci, state: WATER, reason: 'line_analysis' });
+      }
+    }
+  }
+
+  return results;
+}
+
+function enumerateLinePlacements(line, needed, fleet, cl, lineIdx, isRow) {
+  const results = [];
+
+  function rec(pos, segments, shipCount, fleetState) {
+    if (shipCount === needed) {
+      const cells = new Set();
+      for (const seg of segments) {
+        for (let j = seg.start; j < seg.start + seg.len; j++) {
+          if (isRow) cells.add(idx(lineIdx, j));
+          else cells.add(idx(j, lineIdx));
         }
       }
-      if (ok) {
-        const cells = new Set();
-        for (const seg of segs) {
-          for (let j = seg.start; j < seg.start + seg.len; j++) {
-            if (isRow) cells.add(idx(lineIdx, j));
-            else cells.add(idx(j, lineIdx));
-          }
-        }
-        results.push({ cells, segments: segs });
-      }
+      results.push({ cells, segments });
       return;
     }
 
@@ -194,15 +444,20 @@ function enumerateLinePlacements(line, target, fleet, cl, grid, lineIdx, isRow) 
     if (i >= N) return;
 
     for (let len = 4; len >= 1; len--) {
-      if (i + len > N || shipCount + len > target || fleet[len] <= 0) continue;
+      if (i + len > N) continue;
+      if (shipCount + len > needed) continue;
+      if (fleetState[len] <= 0) continue;
       let ok = true;
-      for (let j = 0; j < len; j++) { if (line[i+j] === WATER) { ok = false; break; } }
+      for (let j = 0; j < len; j++) {
+        if (line[i + j] === WATER) { ok = false; break; }
+      }
       if (!ok) continue;
-      if (i > 0 && line[i-1] === SHIP) continue;
-      if (i + len < N && line[i+len] === SHIP) continue;
+      if (i > 0 && line[i - 1] === SHIP) continue;
+      if (i + len < N && line[i + len] === SHIP) continue;
 
-      const nf = { ...fleetState }; nf[len]--;
-      rec(i + len + 1, [...segs, { start: i, len }], shipCount + len, nf);
+      const nf = { ...fleetState };
+      nf[len]--;
+      rec(i + len + 1, [...segments, { start: i, len }], shipCount + len, nf);
     }
   }
 
@@ -210,556 +465,685 @@ function enumerateLinePlacements(line, target, fleet, cl, grid, lineIdx, isRow) 
   return results;
 }
 
+// ---------------------------------------------------------------------------
+// Proof by contradiction solver
+// ---------------------------------------------------------------------------
+
 /**
- * Compute consensus from line placements.
- * Returns { alwaysShipPositions, alwaysWaterPositions } as Sets of positions along the line.
- * Returns empty sets if no valid placement found (puzzle needs backtracking for this line).
+ * Resolve a single cell using proof by contradiction.
+ *
+ * Tests both possible states (SHIP / WATER) for a cell and runs deductions
+ * on each branch.  If both branches force the same state on another cell,
+ * that cell is proved by contradiction.
+ *
+ * The depth of the contradiction result is max(branchDepths) + 1.
  */
-function lineConsensus(line, target, fleet, cl, grid, lineIdx, isRow) {
-  const placements = enumerateLinePlacements(line, target, fleet, cl, grid, lineIdx, isRow);
-  const result = { alwaysShipPositions: new Set(), alwaysWaterPositions: new Set() };
+function resolveContradiction(grid, rc, cc, cl, knownDepths, cell) {
+  // Branch 1: assume cell is SHIP
+  const branch1 = simulateBranch(grid, cell, SHIP, rc, cc, cl, knownDepths);
+  // Branch 2: assume cell is WATER
+  const branch2 = simulateBranch(grid, cell, WATER, rc, cc, cl, knownDepths);
 
-  if (placements.length === 0) return result;
+  // Find cells determined in BOTH branches
+  const result = { resolved: [], contradictionCells: [] };
 
-  // Collect all positions used as ship in any placement
-  const usedAnywhere = new Set();
-  for (const p of placements) {
-    for (const ci of p.cells) {
-      usedAnywhere.add(isRow ? colOf(ci) : rowOf(ci));
+  for (const ci of branch1.shipCells) {
+    if (branch2.shipCells.has(ci) || branch2.waterCells.has(ci)) continue;
+    // Only if the other branch also has it as a ship
+  }
+
+  // Check cells that are ships in branch1 and also ships in branch2
+  for (const ci of branch1.shipCells) {
+    if (branch2.shipCells.has(ci)) {
+      const d1 = branch1.cellDepths.get(ci) || 0;
+      const d2 = branch2.cellDepths.get(ci) || 0;
+      result.resolved.push({ cell: ci, state: SHIP, depth: Math.max(d1, d2) + 1 });
+      result.contradictionCells.push(cell);
     }
   }
 
-  // Always ship: position that's ship in ALL placements
-  for (const pos of usedAnywhere) {
-    let inAll = true;
-    for (const p of placements) {
-      let found = false;
-      for (const ci of p.cells) {
-        if ((isRow ? colOf(ci) : rowOf(ci)) === pos) { found = true; break; }
-      }
-      if (!found) { inAll = false; break; }
-    }
-    if (inAll) result.alwaysShipPositions.add(pos);
-  }
-
-  // Always water: positions that are never used in ANY placement
-  // (but only among positions that are actually UNKNOWN in the line)
-  for (let pos = 0; pos < N; pos++) {
-    if (line[pos] !== UNKNOWN) continue; // Already determined
-    if (!usedAnywhere.has(pos)) {
-      result.alwaysWaterPositions.add(pos);
+  for (const ci of branch1.waterCells) {
+    if (branch2.waterCells.has(ci)) {
+      const d1 = branch1.cellDepths.get(ci) || 0;
+      const d2 = branch2.cellDepths.get(ci) || 0;
+      result.resolved.push({ cell: ci, state: WATER, depth: Math.max(d1, d2) + 1 });
+      result.contradictionCells.push(cell);
     }
   }
 
   return result;
 }
 
-// ===========================================================================
-// Constraint propagation
-// ===========================================================================
+/**
+ * Simulate a single branch: set a cell to a state and run deductions.
+ */
+function simulateBranch(grid, cell, state, rc, cc, cl, knownDepths) {
+  const sim = new Array(N * N);
+  for (let i = 0; i < grid.length; i++) sim[i] = grid[i];
+  sim[cell] = state;
 
-function logicalDepthScore(puzzle) {
+  const depClone = new Map(knownDepths);
+  depClone.set(cell, 1);
+
+  // Run one round of deductions on the branch
+  const { deductions, newDepths, solved } =
+    runDeductionRound(sim, rc, cc, cl, { knownDepths: depClone, maxDepth: 0 });
+
+  // Calculate depths
+  for (const d of deductions) {
+    d.depth = Math.max(1, ...d.dependsOn.map(k => depClone.get(k) || 0)) + 1;
+  }
+
+  for (const dep of newDepths) depClone.set(dep[0], dep[1]);
+
+  // Apply
+  for (let i = 0; i < sim.length; i++) sim[i] = grid[i];
+  sim[cell] = state;
+  for (const d of deductions) {
+    sim[d.cell] = d.state;
+  }
+
+  const shipCells = new Set();
+  const waterCells = new Set();
+  for (let i = 0; i < sim.length; i++) {
+    if (sim[i] === SHIP) shipCells.add(i);
+    else if (sim[i] === WATER) waterCells.add(i);
+  }
+
+  return { grid: sim, shipCells, waterCells, cellDepths: depClone, solved };
+}
+
+/**
+ * Proof-by-contradiction solver.
+ * Iterates through undetermined cells and resolves them using PBC.
+ */
+function proofByContradictionSolver(grid, rc, cc, cl, knownDepths) {
+  const allResolved = [];
+  let maxIter = N * N; // safety limit
+
+  while (maxIter-- > 0) {
+    // Find undetermined cells
+    const undetermined = [];
+    for (let i = 0; i < N * N; i++) {
+      if (grid[i] === UNKNOWN) undetermined.push(i);
+    }
+
+    if (undetermined.length === 0) break;
+
+    let progress = false;
+    let nextRoundResolved = [];
+
+    // Try contradiction on each undetermined cell
+    for (const cell of undetermined) {
+      const result = resolveContradiction(grid, rc, cc, cl, knownDepths, cell);
+
+      for (const r of result.resolved) {
+        if (grid[r.cell] !== UNKNOWN) continue;
+        // Only accept if this is a NEW determination (not already found in this round)
+        const exists = nextRoundResolved.find(x => x.cell === r.cell);
+        if (exists) continue;
+
+        grid[r.cell] = r.state;
+        knownDepths.set(r.cell, r.depth);
+        nextRoundResolved.push(r);
+        allResolved.push(r);
+        progress = true;
+      }
+    }
+
+    if (!progress) break;
+
+    // Run another round of direct deductions to propagate new knowledge
+    runDeductions(grid, rc, cc, cl, knownDepths);
+  }
+
+  return { grid, resolved: allResolved };
+}
+
+// ---------------------------------------------------------------------------
+// Full backtracking solver (for puzzles not solvable by deduction)
+// ---------------------------------------------------------------------------
+
+function solveWithBacktracking(grid, rc, cc, cl) {
+  const knownDepths = new Map();
+  const reasons = new Map();
+  let maxDepth = 0;
+
+  // Seed initial clue depths
+  for (const [cellStr, clue] of Object.entries(cl)) {
+    const cell = +cellStr;
+    if (isIslandClue(clue)) {
+      if (grid[cell] === UNKNOWN) { grid[cell] = WATER; knownDepths.set(cell, 0); reasons.set(cell, 'clue'); }
+    } else if (['s', 'e', 'm'].includes(clue)) {
+      if (grid[cell] === UNKNOWN) { grid[cell] = SHIP; knownDepths.set(cell, 0); reasons.set(cell, 'clue'); }
+    }
+  }
+
+  // Run direct deductions first
+  const { grid: deduced, knownDepths: afterDeduction } =
+    runDeductions(grid, rc, cl, cc, knownDepths);
+
+  for (const dep of afterDeduction) {
+    knownDepths.set(dep[0], dep[1]);
+  }
+
+  maxDepth = 0;
+  for (const [cell, state] of Object.entries(deduced)) {
+    if (state === SHIP) reasons.set(+cell, 'direct');
+    else if (state === WATER) reasons.set(+cell, 'direct');
+  }
+
+  const solved = deduced.every(v => v !== UNKNOWN);
+  if (solved) {
+    return { grid: deduced, knownDepths, reasons, maxDepth, solved, needsBacktracking: false };
+  }
+
+  // Backtracking
+  const btResult = backtrack(deduced, 0, rc, cl, cc, knownDepths, reasons);
+  return btResult;
+}
+
+function backtrack(grid, depth, rc, cl, cc, knownDepths, reasons) {
+  // Check if solved
+  if (grid.every(v => v !== UNKNOWN)) {
+    let maxD = 0;
+    for (const d of knownDepths.values()) if (d > maxD) maxD = d;
+    return { grid, knownDepths, reasons, maxDepth: maxD, solved: true, needsBacktracking: true };
+  }
+
+  // Run direct deductions from current state
+  const { grid: deduced, knownDepths: afterDed, solved } =
+    runDeductions(grid, rc, cl, cc, new Map(knownDepths));
+
+  for (const dep of afterDed) knownDepths.set(dep[0], dep[1]);
+  let maxD = 0;
+  for (const d of afterDed) if (d[1] > maxD) maxD = d[1];
+
+  if (solved) {
+    return { grid: deduced, knownDepths, reasons, maxDepth: maxD, solved: true, needsBacktracking: true };
+  }
+
+  // Find best cell to branch on (one with fewest remaining options)
+  let bestCell = -1;
+  for (let i = 0; i < N * N; i++) {
+    if (grid[i] === UNKNOWN && deduced[i] === UNKNOWN) {
+      bestCell = i;
+      break;
+    }
+  }
+
+  if (bestCell < 0) {
+    // Check remaining unknowns
+    for (let i = 0; i < N * N; i++) {
+      if (deduced[i] === UNKNOWN) { bestCell = i; break; }
+    }
+  }
+
+  if (bestCell < 0) {
+    // All determined somehow
+    let maxD2 = 0;
+    for (const d of knownDepths.values()) if (d > maxD2) maxD2 = d;
+    return { grid: deduced, knownDepths, reasons, maxDepth: maxD2, solved: deduced.every(v => v !== UNKNOWN), needsBacktracking: true };
+  }
+
+  // Try SHIP first
+  const gridShip = new Array(N * N);
+  for (let i = 0; i < deduced.length; i++) gridShip[i] = deduced[i];
+  gridShip[bestCell] = SHIP;
+  knownDepths.set(bestCell, depth + 1);
+  reasons.set(bestCell, 'branch');
+
+  const result = backtrack(gridShip, depth + 1, rc, cl, cc, knownDepths, reasons);
+  if (result.solved) return result;
+
+  // Try WATER
+  const gridWater = new Array(N * N);
+  for (let i = 0; i < deduced.length; i++) gridWater[i] = deduced[i];
+  gridWater[bestCell] = WATER;
+  knownDepths.set(bestCell, depth + 1);
+  reasons.set(bestCell, 'branch');
+
+  return backtrack(gridWater, depth + 1, rc, cl, cc, knownDepths, reasons);
+}
+
+// ---------------------------------------------------------------------------
+// Main analysis
+// ---------------------------------------------------------------------------
+
+function analyzePuzzle(puzzle) {
   const cl = puzzle.cl || {};
   const rc = puzzle.rc || [];
   const cc = puzzle.cc || [];
   const grid = new Array(N * N).fill(UNKNOWN);
 
-  // Init from clues
-  for (const key of Object.keys(cl)) {
-    const i = +key, t = cl[key];
-    if (t === 'w' || isIslandClue(t)) grid[i] = WATER;
-    else if (t === 's' || t === 'e' || t === 'm') grid[i] = SHIP;
+  // Seed initial clues
+  for (const [cellStr, clue] of Object.entries(cl)) {
+    const cell = +cellStr;
+    if (clue === 'w' || isIslandClue(clue)) grid[cell] = WATER;
+    else if (['s', 'e', 'm'].includes(clue)) grid[cell] = SHIP;
   }
 
-  let round = 0, changed = true;
+  // Phase 1: Direct deductions with depth tracking
+  const knownDepths = new Map();
+  const reasons = new Map();
 
-  while (changed) {
-    round++;
-    changed = false;
-    const newStates = [];
-
-    function rec(r, c, st) {
-      const i = idx(r, c);
-      if (grid[i] === UNKNOWN) { newStates.push([r, c, st]); changed = true; }
+  // Seed: clues that set a cell have depth 0
+  for (let i = 0; i < N * N; i++) {
+    if (grid[i] !== UNKNOWN) {
+      knownDepths.set(i, 0);
+      reasons.set(i, 'clue');
     }
-
-    // R1: Island area clearing
-    for (const key of Object.keys(cl)) {
-      if (isIslandClue(cl[key])) {
-        const i = +key;
-        if (grid[i] !== WATER) rec(rowOf(i), colOf(i), WATER);
-      }
-    }
-
-    // R2: Ship type clues
-    for (const key of Object.keys(cl)) {
-      const t = cl[key];
-      if (t !== 's' && t !== 'e' && t !== 'm') continue;
-      const i = +key; if (grid[i] !== SHIP) continue;
-      const r = rowOf(i), c = colOf(i);
-      if (t === 's') {
-        for (const [nr, nc] of orthNeighbors(r, c)) rec(nr, nc, WATER);
-      } else if (t === 'e') {
-        let sn = 0, un = [];
-        for (const [nr, nc] of orthNeighbors(r, c)) {
-          const ni = idx(nr, nc);
-          if (grid[ni] === SHIP) sn++; else if (grid[ni] === UNKNOWN) un.push([nr, nc]);
-        }
-        if (sn === 1) for (const [nr, nc] of un) rec(nr, nc, WATER);
-      } else if (t === 'm') {
-        const sn2 = [], un = [];
-        for (const [nr, nc] of orthNeighbors(r, c)) {
-          const ni = idx(nr, nc);
-          if (grid[ni] === SHIP) sn2.push([nr, nc]); else if (grid[ni] === UNKNOWN) un.push([nr, nc]);
-        }
-        if (sn2.length === 2) {
-          const [ar, ac] = sn2[0], [br, bc] = sn2[1];
-          if (ar === br || ac === bc) for (const [nr, nc] of un) rec(nr, nc, WATER);
-        }
-      }
-    }
-
-    // R3: Adjacency propagation
-    for (let r = 0; r < N; r++) {
-      for (let c = 0; c < N; c++) {
-        if (grid[idx(r, c)] === SHIP) {
-          for (const [nr, nc] of orthNeighbors(r, c)) rec(nr, nc, WATER);
-        }
-      }
-    }
-
-    // R4: Component water
-    const comps = findShipComponents(grid);
-    for (const [wr, wc] of getWaterFromComponents(comps)) rec(wr, wc, WATER);
-
-    // R5: Row/Column forced
-    for (let r = 0; r < N; r++) {
-      let sc = 0, uc = 0, un = [];
-      for (let c = 0; c < N; c++) {
-        const i = idx(r, c);
-        if (grid[i] === SHIP) sc++;
-        else if (grid[i] === UNKNOWN) { uc++; un.push(c); }
-      }
-      const rem = (rc[r] || 0) - sc;
-      if (rem === uc && rem >= 0) for (const c of un) rec(r, c, SHIP);
-      else if (rem === 0) for (const c of un) rec(r, c, WATER);
-    }
-    for (let c = 0; c < N; c++) {
-      let sc = 0, uc = 0, un = [];
-      for (let r = 0; r < N; r++) {
-        const i = idx(r, c);
-        if (grid[i] === SHIP) sc++;
-        else if (grid[i] === UNKNOWN) { uc++; un.push(r); }
-      }
-      const rem = (cc[c] || 0) - sc;
-      if (rem === uc && rem >= 0) for (const r of un) rec(r, c, SHIP);
-      else if (rem === 0) for (const r of un) rec(r, c, WATER);
-    }
-
-    // R6: Island neighbor propagation
-    for (const key of Object.keys(cl)) {
-      const t = cl[key];
-      if (!isIslandClue(t)) continue;
-      const i = +key, ir = rowOf(i), ic = colOf(i), target = islandTarget(t);
-      let ships = 0, unknowns = 0, unCells = [];
-      for (const [nr, nc] of orthNeighbors(ir, ic)) {
-        const ni = idx(nr, nc);
-        if (grid[ni] === SHIP) ships++;
-        else if (grid[ni] === UNKNOWN) { unknowns++; unCells.push([nr, nc]); }
-      }
-      if (ships + unknowns === target && ships < target)
-        for (const [nr, nc] of unCells) rec(nr, nc, SHIP);
-      else if (ships === target)
-        for (const [nr, nc] of unCells) rec(nr, nc, WATER);
-    }
-
-    // R7: Line analysis with diagonal + ship-type constraints
-    const remFleet = remainingFleet(grid);
-
-    for (let r = 0; r < N; r++) {
-      const line = [];
-      for (let c = 0; c < N; c++) line.push(grid[idx(r, c)]);
-      const sc = line.filter(v => v === SHIP).length;
-      const rem = (rc[r] || 0) - sc;
-      if (rem <= 0) continue;
-
-      const res = lineConsensus(line, rem, remFleet, cl, grid, r, true);
-      for (const c of res.alwaysShipPositions) if (line[c] === UNKNOWN) rec(r, c, SHIP);
-      for (const c of res.alwaysWaterPositions) if (line[c] === UNKNOWN) rec(r, c, WATER);
-    }
-
-    for (let c = 0; c < N; c++) {
-      const line = [];
-      for (let r = 0; r < N; r++) line.push(grid[idx(r, c)]);
-      const sc = line.filter(v => v === SHIP).length;
-      const rem = (cc[c] || 0) - sc;
-      if (rem <= 0) continue;
-
-      const res = lineConsensus(line, rem, remFleet, cl, grid, c, false);
-      for (const r of res.alwaysShipPositions) if (line[r] === UNKNOWN) rec(r, c, SHIP);
-      for (const r of res.alwaysWaterPositions) if (line[r] === UNKNOWN) rec(r, c, WATER);
-    }
-
-    // Apply all changes
-    for (const [r, c, st] of newStates) grid[idx(r, c)] = st;
   }
 
-  return { rounds: round, solved: grid.every(v => v !== UNKNOWN) };
+  const direct = runDeductions(grid, rc, cl, cc, knownDepths);
+  for (const dep of direct.knownDepths) knownDepths.set(dep[0], dep[1]);
+
+  const afterDirectSolved = direct.grid.every(v => v !== UNKNOWN);
+
+  // Phase 2: Proof by contradiction for remaining cells
+  let pbcResolved = [];
+  let pbcGrid = null;
+  if (!afterDirectSolved) {
+    const pbc = proofByContradictionSolver(direct.grid, rc, cc, cl, knownDepths);
+    pbcResolved = pbc.resolved;
+    pbcGrid = pbc.grid;
+    for (let i = 0; i < pbcGrid.length; i++) {
+      if (pbcGrid[i] !== UNKNOWN) {
+        knownDepths.set(i, knownDepths.get(i) || 0);
+      }
+    }
+  }
+
+  // Phase 3: Full backtracking if still not solved
+  let btResult = null;
+  let ded2Grid = null;
+  if (pbcResolved.length > 0 && pbcGrid) {
+    const stillUnsolved = pbcResolved.filter(r => pbcGrid[r.cell] !== UNKNOWN);
+    if (stillUnsolved.length > 0 || pbcGrid.some(v => v === UNKNOWN)) {
+      // Re-run deductions on PBC result
+      ded2Grid = runDeductions(pbcGrid, rc, cl, cc, new Map(knownDepths));
+      for (const dep of ded2Grid.knownDepths) knownDepths.set(dep[0], dep[1]);
+
+      if (!ded2Grid.grid.every(v => v !== UNKNOWN)) {
+        btResult = solveWithBacktracking(ded2Grid.grid, rc, cl, cc);
+        for (const dep of btResult.knownDepths) knownDepths.set(dep[0], dep[1]);
+      }
+    }
+  }
+
+  if (!afterDirectSolved && pbcResolved.length === 0) {
+    btResult = solveWithBacktracking(direct.grid, rc, cl, cc);
+    for (const dep of btResult.knownDepths) knownDepths.set(dep[0], dep[1]);
+  }
+
+  // Determine final solved state — check in priority order:
+  // 1. Direct solved
+  // 2. Deductions after PBC (ded2Grid) — if it solved the puzzle, use it
+  // 3. PBC grid (only if it's fully solved)
+  // 4. Backtracking result
+  // 5. Direct grid as fallback
+  let finalGrid, finalSolved, finalMaxDepth, needsBacktracking;
+
+  if (afterDirectSolved) {
+    finalGrid = direct.grid;
+    finalSolved = true;
+    finalMaxDepth = 0;
+    needsBacktracking = false;
+    for (const d of knownDepths.values()) if (d > finalMaxDepth) finalMaxDepth = d;
+  } else if (ded2Grid && ded2Grid.grid.every(v => v !== UNKNOWN)) {
+    // Deductions after PBC solved the puzzle
+    finalGrid = ded2Grid.grid;
+    finalSolved = true;
+    finalMaxDepth = 0;
+    needsBacktracking = false;
+    for (const d of knownDepths.values()) if (d > finalMaxDepth) finalMaxDepth = d;
+  } else if (pbcGrid && pbcGrid.every(v => v !== UNKNOWN)) {
+    // PBC grid is fully solved
+    finalGrid = pbcGrid;
+    finalSolved = true;
+    finalMaxDepth = 0;
+    needsBacktracking = false;
+    for (const d of knownDepths.values()) if (d > finalMaxDepth) finalMaxDepth = d;
+  } else if (btResult) {
+    finalGrid = btResult.grid;
+    finalSolved = btResult.solved;
+    finalMaxDepth = btResult.maxDepth;
+    needsBacktracking = btResult.needsBacktracking;
+  } else {
+    finalGrid = direct.grid;
+    finalSolved = false;
+    finalMaxDepth = 0;
+    needsBacktracking = true;
+  }
+
+  // Calculate statistics
+  let determinedCells = 0, totalUnknowns = 0;
+  let reasoningCells = 0, reasoningDepthSum = 0;
+  const depthDistribution = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0 };
+  let totalDepth = 0;
+  let maxDirectDepth = 0;
+
+  for (let i = 0; i < N * N; i++) {
+    if (finalGrid[i] === UNKNOWN) {
+      totalUnknowns++;
+      continue;
+    }
+    determinedCells++;
+    const d = knownDepths.get(i) || 0;
+    totalDepth += d;
+    depthDistribution[d] = (depthDistribution[d] || 0) + 1;
+
+    // Reasoning cells (depth >= 1, not just given clues)
+    if (d >= 1) {
+      reasoningCells++;
+      reasoningDepthSum += d;
+      if (d > maxDirectDepth) maxDirectDepth = d;
+    }
+  }
+
+  // Average chain length across reasoning cells (depth >= 1), excluding clue-only cells
+  const avgDepth = reasoningCells > 0 ? reasoningDepthSum / reasoningCells : 0;
+
+  // Percentages based on all determined cells (including clues for denominator)
+  const cellsDepthGe2 = (depthDistribution[2] || 0) + (depthDistribution[3] || 0) +
+    (depthDistribution[4] || 0) + (depthDistribution[5] || 0) +
+    (depthDistribution[6] || 0) + (depthDistribution[7] || 0) +
+    (depthDistribution[8] || 0) + (depthDistribution[9] || 0);
+  const cellsDepthGe3 = (depthDistribution[3] || 0) + (depthDistribution[4] || 0) +
+    (depthDistribution[5] || 0) + (depthDistribution[6] || 0) +
+    (depthDistribution[7] || 0) + (depthDistribution[8] || 0) +
+    (depthDistribution[9] || 0);
+  const pctGe2 = determinedCells > 0 ? (cellsDepthGe2 / determinedCells) * 100 : 0;
+  const pctGe3 = determinedCells > 0 ? (cellsDepthGe3 / determinedCells) * 100 : 0;
+
+  const directRounds = direct.rounds;
+
+  return {
+    logicalDepth: Math.max(finalMaxDepth, 0),
+    avgChainLength: Math.round(avgDepth * 100) / 100,
+    pctDepthGe2: Math.round(pctGe2 * 10) / 10,
+    pctDepthGe3: Math.round(pctGe3 * 10) / 10,
+    maxDirectDepth,
+    determinedCells,
+    reasoningCells,
+    totalUnknowns: totalUnknowns,
+    depthDistribution,
+    solved: finalSolved,
+    needsBacktracking: needsBacktracking,
+    directRounds,
+  };
 }
 
-// ===========================================================================
-// Chain length analysis
-// ===========================================================================
-
-function getLogicalChainLength(puzzle) {
-  const cl = puzzle.cl || {}, rc = puzzle.rc || [], cc = puzzle.cc || [];
-  const grid = new Array(N * N).fill(UNKNOWN);
-  const detRound = new Array(N * N).fill(-1);
-  const detReason = new Array(N * N).fill('');
-
-  for (const key of Object.keys(cl)) {
-    const i = +key, t = cl[key];
-    if (t === 'w' || isIslandClue(t)) { grid[i] = WATER; detReason[i] = 'clue'; }
-    else if (t === 's' || t === 'e' || t === 'm') { grid[i] = SHIP; detReason[i] = 'clue'; }
-    detRound[i] = 0;
-  }
-
-  let round = 0, changed = true;
-
-  while (changed) {
-    round++;
-    changed = false;
-
-    for (const key of Object.keys(cl)) {
-      if (isIslandClue(cl[key])) {
-        const i = +key;
-        if (grid[i] !== WATER) { grid[i] = WATER; detRound[i] = round; detReason[i] = 'island'; changed = true; }
-      }
-    }
-
-    const changes = [];
-    function rec(r, c, st, re) {
-      const i = idx(r, c);
-      if (grid[i] === UNKNOWN) { changes.push([r, c, st, re]); changed = true; }
-    }
-
-    // Ship type
-    for (const key of Object.keys(cl)) {
-      const t = cl[key];
-      if (t !== 's' && t !== 'e' && t !== 'm') continue;
-      const i = +key; if (grid[i] !== SHIP) continue;
-      const r = rowOf(i), c = colOf(i);
-      if (t === 's') for (const [nr,nc] of orthNeighbors(r,c)) rec(nr,nc,WATER,'s');
-      else if (t === 'e') {
-        let sn=0,un=[]; for (const [nr,nc] of orthNeighbors(r,c)) { const ni=idx(nr,nc); if(grid[ni]===SHIP)sn++; else if(grid[ni]===UNKNOWN)un.push([nr,nc]); }
-        if (sn===1) for (const [nr,nc] of un) rec(nr,nc,WATER,'e');
-      } else if (t === 'm') {
-        const sn2=[],un=[]; for (const [nr,nc] of orthNeighbors(r,c)) { const ni=idx(nr,nc); if(grid[ni]===SHIP)sn2.push([nr,nc]); else if(grid[ni]===UNKNOWN)un.push([nr,nc]); }
-        if (sn2.length===2) { const [ar,ac]=sn2[0],[br,bc]=sn2[1]; if(ar===br||ac===bc) for (const [nr,nc] of un) rec(nr,nc,WATER,'m'); }
-      }
-    }
-
-    for (let r=0;r<N;r++) for (let c=0;c<N;c++) if (grid[idx(r,c)]===SHIP) for (const [nr,nc] of orthNeighbors(r,c)) rec(nr,nc,WATER,'adj');
-
-    for (let r=0;r<N;r++) { let sc=0,uc=0,un=[]; for (let c=0;c<N;c++){const i=idx(r,c);if(grid[i]===SHIP)sc++;else if(grid[i]===UNKNOWN){uc++;un.push(c);}} const rem=(rc[r]||0)-sc;if(rem===uc&&rem>=0)for(const c of un)rec(r,c,SHIP,'row');else if(rem===0)for(const c of un)rec(r,c,WATER,'row');}
-    for (let c=0;c<N;c++) { let sc=0,uc=0,un=[]; for (let r=0;r<N;r++){const i=idx(r,c);if(grid[i]===SHIP)sc++;else if(grid[i]===UNKNOWN){uc++;un.push(r);}} const rem=(cc[c]||0)-sc;if(rem===uc&&rem>=0)for(const r of un)rec(r,c,SHIP,'col');else if(rem===0)for(const r of un)rec(r,c,WATER,'col');}
-
-    for (const key of Object.keys(cl)) {
-      const t=cl[key]; if(!isIslandClue(t)) continue;
-      const i=+key,ir=rowOf(i),ic=colOf(i),tgt=islandTarget(t);
-      let sh=0,uk=0,uc=[]; for (const [nr,nc] of orthNeighbors(ir,ic)) { const ni=idx(nr,nc); if(grid[ni]===SHIP)sh++; else if(grid[ni]===UNKNOWN){uk++;uc.push([nr,nc]);} }
-      if(sh+uk===tgt&&sh<tgt) for(const [nr,nc] of uc) rec(nr,nc,SHIP,'island');
-      else if(sh===tgt) for(const [nr,nc] of uc) rec(nr,nc,WATER,'island');
-    }
-
-    const ws = getWaterFromComponents(findShipComponents(grid));
-    for (const [wr,wc] of ws) rec(wr,wc,WATER,'comp');
-
-    const rf = remainingFleet(grid);
-    for (let r=0;r<N;r++) {
-      const line=[]; for(let c=0;c<N;c++) line.push(grid[idx(r,c)]);
-      const sc=line.filter(v=>v===SHIP).length, rem=(rc[r]||0)-sc; if(rem<=0) continue;
-      const res = lineConsensus(line,rem,rf,cl,grid,r,true);
-      for(const c of res.alwaysShipPositions) if(line[c]===UNKNOWN) rec(r,c,SHIP,'line');
-      for(const c of res.alwaysWaterPositions) if(line[c]===UNKNOWN) rec(r,c,WATER,'line');
-    }
-    for (let c=0;c<N;c++) {
-      const line=[]; for(let r=0;r<N;r++) line.push(grid[idx(r,c)]);
-      const sc=line.filter(v=>v===SHIP).length, rem=(cc[c]||0)-sc; if(rem<=0) continue;
-      const res = lineConsensus(line,rem,rf,cl,grid,c,false);
-      for(const r of res.alwaysShipPositions) if(line[r]===UNKNOWN) rec(r,c,SHIP,'line');
-      for(const r of res.alwaysWaterPositions) if(line[r]===UNKNOWN) rec(r,c,WATER,'line');
-    }
-
-    for (const [r,c,s,re] of changes) { grid[idx(r,c)]=s; detRound[idx(r,c)]=round; detReason[idx(r,c)]=re; }
-  }
-
-  let maxD = 0;
-  for (const d of detRound) if (d > maxD) maxD = d;
-  return { maxChainDepth: maxD };
-}
-
-// ===========================================================================
-// New difficulty classification based on logical depth + backtracking + chain
-// ===========================================================================
-
-function classifyByLogicalDepth(depth, chain, needsBacktracking) {
-  // Easy: easily solvable by constraint propagation alone
-  if (depth <= 3) return 'easy';
-
-  // Expert: very deep reasoning or long chains
-  if (depth >= 7) return 'expert';
-  if (depth >= 6 && (needsBacktracking || chain >= 6)) return 'expert';
-
-  // Hard: requires some backthinking or long chains
-  if (chain >= 5) return 'hard';
-  if (depth >= 5 && (needsBacktracking || chain >= 4)) return 'hard';
-
-  // Medium: moderate depth without backtracking
-  return 'medium';
-}
-
-// ===========================================================================
+// ---------------------------------------------------------------------------
 // Main
-// ===========================================================================
+// ---------------------------------------------------------------------------
 
 function main() {
   const data = JSON.parse(fs.readFileSync(path.join(__dirname, 'bimaru-harbor-library.json'), 'utf-8'));
 
-  console.log('='.repeat(115));
-  console.log('  BIMARU HARBOR — LOGICAL DEPTH ANALYSIS');
-  console.log('  Rules: island-clearing, ship-type(s/e/m), adjacency, component-water, forced(row/col), island-neighbor, line-analysis(diagonal+clue)');
-  console.log('='.repeat(115));
+  console.log('═'.repeat(110));
+  console.log('  BIMARU HARBOR — REASONING DEPTH ANALYSIS (Decision-Tree Approach)');
+  console.log('═'.repeat(110));
   console.log();
-
-  const THRESHOLDS = { easy: 4, medium: 6, hard: 7 };
-  function classify(rd) {
-    if (rd <= THRESHOLDS.easy) return 'easy';
-    if (rd <= THRESHOLDS.medium) return 'medium';
-    if (rd <= THRESHOLDS.hard) return 'hard';
-    return 'expert';
-  }
+  console.log('  Depth = number of logical reasoning steps from initial clues');
+  console.log('  Depth 1: Directly deducible from clues (ships, water, adj, counts)');
+  console.log('  Depth 2: Deduced from depth-1 knowledge (island neighbors, line analysis)');
+  console.log('  Depth 3+: Proof-by-contradiction or backtracking required');
+  console.log();
 
   const results = [];
   for (const puzzle of data) {
-    const depth = logicalDepthScore(puzzle);
-    const chain = getLogicalChainLength(puzzle);
+    const analysis = analyzePuzzle(puzzle);
     const clueCount = Object.keys(puzzle.cl || {}).length;
-    const shipClues = Object.values(puzzle.cl || {}).filter(v => typeof v === 'string' && ['s','e','m'].includes(v)).length;
-    const islandClues = Object.values(puzzle.cl || {}).filter(v => typeof v === 'string' && /^i\d$/.test(v)).length;
-    const logDiff = classify(depth.rounds);
+    const shipClues = Object.values(puzzle.cl || {}).filter(v =>
+      typeof v === 'string' && ['s', 'e', 'm'].includes(v)
+    ).length;
+    const islandClues = Object.values(puzzle.cl || {}).filter(v =>
+      typeof v === 'string' && /^i\d+$/.test(v)
+    ).length;
+
+    const logDiff = classifyByLogicalDepth(analysis);
     const origDiff = puzzle.difficulty || 'unknown';
     const reclassified = logDiff !== origDiff;
-    const needsBacktracking = !depth.solved;
-    const newDifficulty = classifyByLogicalDepth(depth.rounds, chain.maxChainDepth, needsBacktracking);
-    const newReclassified = newDifficulty !== origDiff;
-    results.push({ id: puzzle.id, name: puzzle.meta?.name ? puzzle.meta.name : `Puzzle ${puzzle.id}`,
-      originalDifficulty: origDiff, logicalDifficulty: logDiff,
-      clueCount, shipClues, islandClues, logicalDepth: depth.rounds, solved: depth.solved,
-      maxChainDepth: chain.maxChainDepth, reclassified, needsBacktracking,
-      chainLength: chain.maxChainDepth, newDifficulty, newReclassified });
+
+    results.push({
+      id: puzzle.id,
+      name: puzzle.meta?.name ? puzzle.meta.name : `Puzzle ${puzzle.id}`,
+      originalDifficulty: origDiff,
+      logicalDepth: analysis.logicalDepth,
+      avgChainLength: analysis.avgChainLength,
+      pctDepthGe2: analysis.pctDepthGe2,
+      pctDepthGe3: analysis.pctDepthGe3,
+      solved: analysis.solved,
+      needsBacktracking: analysis.needsBacktracking,
+      directRounds: analysis.directRounds,
+      determinedCells: analysis.determinedCells,
+      totalUnknowns: analysis.totalUnknowns,
+      depthDistribution: analysis.depthDistribution,
+      clueCount,
+      shipClues,
+      islandClues,
+      reclassified,
+    });
   }
 
   // --- Main table ---
-  console.log(
-    '┌──────┬────────────┬────────────────┬──────────────────┬────────┬───────┬──────────┬───────────┬───────────────┬───────┬────────┐'
-  );
-  console.log(
-    '│ ID   │ Name       │ Difficulty     │ Logical Difficulty│ New    │ Clues │  Ships   │  Islands  │ Logical Depth │ Chain │  BT  │'
-  );
-  console.log(
-    '├──────┼────────────┼────────────────┼──────────────────┼────────┼───────┼──────────┼───────────┼───────────────┼───────┼──────┤'
-  );
+  console.log('┌──────┬────────────────────────┬──────────────┬───────────┬──────────┬───────────┬───────┬────────┬────────┬───────┐');
+  console.log('│ ID   │ Name                   │ Difficulty   │ Depth     │ Avg Chain│ % ≥ Depth2│ % ≥3  │ Direct │ Solved │  BT   │');
+  console.log('├──────┼────────────────────────┼──────────────┼───────────┼──────────┼───────────┼───────┼────────┼────────┼───────┤');
 
   for (const r of results) {
-    const nm = r.name.length > 11 ? r.name.slice(0,8)+'...' : r.name.padEnd(11);
-    const od = r.originalDifficulty.padEnd(14);
-    const ld = r.logicalDifficulty.padEnd(16);
-    const cls = r.reclassified ? ' ⚠' : '';
-    const nd = r.newDifficulty.padEnd(6);
-    const ndCls = r.newReclassified ? ' ⚡' : '';
+    const nm = r.name.length > 22 ? r.name.slice(0, 19) + '...' : r.name.padEnd(22);
+    const od = r.originalDifficulty.padEnd(10);
+    const ld = String(r.logicalDepth).padEnd(9);
+    const acl = String(r.avgChainLength).padEnd(8);
+    const p2 = `${String(r.pctDepthGe2).padEnd(5)}%`;
+    const p3 = `${String(r.pctDepthGe3).padEnd(5)}%`;
+    const dr = String(r.directRounds).padEnd(6);
     const sol = r.solved ? '✓' : '✗';
     const bt = r.needsBacktracking ? '✗' : '✓';
-    console.log(
-      `│ ${String(r.id).padEnd(4)}  │ ${nm} │ ${od} │ ${ld}${cls} │ ${nd}${ndCls} │ ${String(r.clueCount).padEnd(5)} │ ${String(r.shipClues).padEnd(6)} │ ${String(r.islandClues).padEnd(7)} │ ${String(r.logicalDepth).padEnd(9)}${sol.padEnd(2)} │ ${String(r.maxChainDepth).padEnd(5)} │ ${bt.padEnd(2)} │`
-    );
+    const cls = r.reclassified ? ' ⚡' : '';
+    console.log(`│ ${String(r.id).padEnd(4)}  │ ${nm} │ ${od}${cls} │ ${ld}   │ ${acl}  │ ${p2} │ ${p3} │ ${dr}  │ ${sol}    │ ${bt}    │`);
   }
 
-  console.log(
-    '└──────┴────────────┴────────────────┴──────────────────┴────────┴───────┴──────────┴───────────┴───────────────┴───────┴──────┘'
-  );
-  console.log('  BT = solved by propagation (✓) / needs backtracking (✗)');
-  console.log('  ⚠ = logical depth mismatch with original difficulty');
-  console.log('  ⚡ = new difficulty classification changed');
+  console.log('└──────┴────────────────────────┴──────────────┴───────────┴──────────┴───────────┴───────┴────────┴────────┴───────┘');
+  console.log();
+  console.log('  Depth = max reasoning chain length for any cell');
+  console.log('  Avg Chain = mean reasoning steps across all determined cells');
+  console.log('  % ≥ Depth2 = cells requiring proof-by-contradiction or deeper');
+  console.log('  Direct = rounds of pure deduction before contradiction/backtracking');
+  console.log('  ⚡ = difficulty reclassified');
+  console.log('  BT = backtracking needed (✗) / pure deduction (✓)');
   console.log();
 
-  // --- Cross-tabulation ---
-  const origG = { easy:[], medium:[], hard:[], expert:[] };
-  const logG = { easy:[], medium:[], hard:[], expert:[] };
-  for (const r of results) {
-    (origG[r.originalDifficulty]||origG.expert)?.push(r);
-    (logG[r.logicalDifficulty]||logG.expert)?.push(r);
+  // --- Summary statistics ---
+  const depths = results.map(r => r.logicalDepth);
+  const avgDepth = depths.reduce((a, b) => a + b, 0) / depths.length;
+  const solCount = results.filter(r => r.solved).length;
+  const btCount = results.filter(r => r.needsBacktracking).length;
+  const recCount = results.filter(r => r.reclassified).length;
+  const pctGe2 = results.map(r => r.pctDepthGe2).reduce((a, b) => a + b, 0) / results.length;
+  const pctGe3 = results.map(r => r.pctDepthGe3).reduce((a, b) => a + b, 0) / results.length;
+
+  console.log('─'.repeat(110));
+  console.log('  SUMMARY');
+  console.log('─'.repeat(110));
+  console.log(`  Total puzzles:              ${results.length}`);
+  console.log(`  Fully solved by deduction:  ${solCount}/${results.length}`);
+  console.log(`  Needed backtracking:        ${btCount}/${results.length}`);
+  console.log(`  Avg logical depth:          ${avgDepth.toFixed(1)}`);
+  console.log(`  Min/Max logical depth:      ${Math.min(...depths)} / ${Math.max(...depths)}`);
+  console.log(`  Avg % cells at depth ≥ 2:   ${pctGe2.toFixed(1)}%`);
+  console.log(`  Avg % cells at depth ≥ 3:   ${pctGe3.toFixed(1)}%`);
+  console.log(`  Puzzles reclassified:       ${recCount}/${results.length}`);
+  console.log();
+
+  // --- Depth distribution ---
+  const depthBins = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0, 10: 0 };
+  for (const d of depths) {
+    if (d > 10) depthBins[10]++;
+    else depthBins[d]++;
   }
-
-  console.log('═'.repeat(115));
-  console.log('  CURRENT DIFFICULTY → LOGICAL DEPTH DISTRIBUTION');
-  console.log('═'.repeat(115));
-  console.log();
-  console.log(
-    '┌────────────────┬──────┬──────────┬──────────┬──────────┬───────────┬──────────────────────┐'
-  );
-  console.log(
-    '│ Original Diff  │  N   │ avgDepth │ minDepth │ maxDepth │ Solved?   │ Logical depth spread │'
-  );
-  console.log(
-    '├────────────────┼──────┼──────────┼──────────┼──────────┼───────────┼──────────────────────┤'
-  );
-  for (const diff of ['easy','medium','hard','expert']) {
-    const g = origG[diff]; if (!g?.length) continue;
-    const depths = g.map(r=>r.logicalDepth);
-    const avg=(depths.reduce((a,b)=>a+b,0)/depths.length).toFixed(1);
-    const mn=Math.min(...depths), mx=Math.max(...depths);
-    const sol=(g.filter(r=>r.solved).length).toString();
-    const spread=[...new Set(g.map(r=>r.logicalDifficulty))].sort().join(', ');
-    console.log(
-      `│ ${diff.padEnd(14)} │ ${String(g.length).padEnd(4)} │ ${avg.padEnd(8)} │ ${String(mn).padEnd(8)} │ ${String(mx).padEnd(8)} │ ${sol.padEnd(7)} │ ${spread.padEnd(22)} │`
-    );
+  console.log('  Depth distribution:');
+  for (const [depth, count] of Object.entries(depthBins)) {
+    if (count === 0) continue;
+    const bar = '█'.repeat(count * 2);
+    console.log(`    Depth ${depth}: ${String(count).padEnd(2)} ${bar}`);
   }
-  console.log(
-    '└────────────────┴──────┴──────────┴──────────┴──────────┴───────────┴──────────────────────┘'
-  );
   console.log();
 
-  console.log('Logical depth distribution:');
-  for (const diff of ['easy','medium','hard','expert'])
-    console.log(`  ${diff.padEnd(10)}: ${(logG[diff]||[]).length} puzzles`);
-  console.log();
-
-  const rec = results.filter(r=>r.reclassified);
+  // --- Reclassified puzzles ---
+  const rec = results.filter(r => r.reclassified);
   if (rec.length > 0) {
-    console.log(`RECLASSIFIED (${rec.length} puzzles):`);
+    console.log('─'.repeat(110));
+    console.log(`  RECLASSIFIED (${rec.length} puzzles)`);
+    console.log('─'.repeat(110));
     console.log();
+
     const changes = {};
     for (const r of rec) {
-      const key = `${r.originalDifficulty} → ${r.logicalDifficulty}`;
+      const key = `${r.originalDifficulty} → ${classifyByLogicalDepth(r)}`;
       (changes[key] = changes[key] || []).push(r);
     }
     for (const [change, puzzles] of Object.entries(changes)) {
       console.log(`  ${change}:`);
-      for (const p of puzzles.sort((a,b)=>b.logicalDepth-a.logicalDepth)) {
-        console.log(`    ID ${String(p.id).padEnd(2)}: ${p.solved?'✓':'✗'} depth=${String(p.logicalDepth).padEnd(2)} chain=${String(p.maxChainDepth).padEnd(2)} clues=${String(p.clueCount).padEnd(2)}`);
+      for (const p of puzzles.sort((a, b) => b.logicalDepth - a.logicalDepth)) {
+        console.log(`    ID ${String(p.id).padEnd(2)}: depth=${String(p.logicalDepth).padEnd(2)} avg=${String(p.avgChainLength).padEnd(5)} %≥2=${String(p.pctDepthGe2).padEnd(4)}% clues=${String(p.clueCount).padEnd(2)}`);
       }
       console.log();
     }
   }
 
-  const depths = results.map(r=>r.logicalDepth);
-  const solCount = results.filter(r=>r.solved).length;
-
-  // --- New classification: Hard/Expert puzzles ---
-  const hardExpert = results.filter(r => r.newDifficulty === 'hard' || r.newDifficulty === 'expert');
+  // --- Hard/Expert puzzles ---
+  const hardExpert = results.filter(r => classifyByLogicalDepth(r) === 'hard' || classifyByLogicalDepth(r) === 'expert');
   if (hardExpert.length > 0) {
-    console.log('═'.repeat(115));
-    console.log('  NEW CLASSIFICATION — HARD / EXPERT PUZZLES');
-    console.log('═'.repeat(115));
+    console.log('─'.repeat(110));
+    console.log(`  HARD / EXPERT PUZZLES (${hardExpert.length})`);
+    console.log('─'.repeat(110));
     console.log();
 
-    // Expert subsection
-    const expert = hardExpert.filter(r => r.newDifficulty === 'expert');
+    const expert = hardExpert.filter(r => classifyByLogicalDepth(r) === 'expert');
     if (expert.length > 0) {
-      console.log(`EXPERT (${expert.length}):`);
+      console.log(`  EXPERT (${expert.length}):`);
       console.log();
-      console.log(
-        '┌──────┬────────────┬──────────┬──────────┬───────────┬────────┬──────────────────────────────┐'
-      );
-      console.log(
-        '│ ID   │ Name       │ Original │ Depth    │ Chain     │ Solved │ Reason                       │'
-      );
-      console.log(
-        '├──────┼────────────┼──────────┼──────────┼───────────┼────────┼──────────────────────────────┤'
-      );
-      for (const r of expert.sort((a,b) => b.logicalDepth - a.logicalDepth || b.maxChainDepth - a.maxChainDepth)) {
-        const nm = r.name.length > 11 ? r.name.slice(0,8)+'...' : r.name.padEnd(11);
+      console.log('  ┌──────┬────────────────────────┬──────────┬───────────┬──────────┬───────────┬──────────────────────┐');
+      console.log('  │ ID   │ Name                   │ Original │ Depth     │ Avg Chain│ % ≥ Depth2│ Reason               │');
+      console.log('  ├──────┼────────────────────────┼──────────┼───────────┼──────────┼───────────┼──────────────────────┤');
+      for (const r of expert.sort((a, b) => b.logicalDepth - a.logicalDepth)) {
+        const nm = r.name.length > 22 ? r.name.slice(0, 19) + '...' : r.name.padEnd(22);
         const reasons = [];
-        if (r.logicalDepth >= 7) reasons.push('depth≥7');
-        if (r.logicalDepth >= 6 && r.needsBacktracking) reasons.push('d≥6+bt');
-        if (r.logicalDepth >= 6 && r.chainLength >= 6) reasons.push('d≥6+c≥6');
+        if (r.logicalDepth >= 6) reasons.push(`depth=${r.logicalDepth}`);
+        if (r.needsBacktracking) reasons.push('bt');
+        if (r.pctDepthGe2 >= 50) reasons.push(`%≥2=${r.pctDepthGe2}%`);
         const reason = reasons.join(', ') || 'N/A';
-        console.log(
-          `│ ${String(r.id).padEnd(4)}  │ ${nm} │ ${r.originalDifficulty.padEnd(8)} │ ${String(r.logicalDepth).padEnd(8)} │ ${String(r.chainLength).padEnd(7)} │ ${r.solved?'Solved':'BT'}     │ ${reason.padEnd(30)} │`
-        );
+        console.log(`  │ ${String(r.id).padEnd(4)}  │ ${nm} │ ${r.originalDifficulty.padEnd(8)} │ ${String(r.logicalDepth).padEnd(9)} │ ${String(r.avgChainLength).padEnd(8)} │ ${String(r.pctDepthGe2).padEnd(7)}% │ ${reason.padEnd(22)} │`);
       }
-      console.log(
-        '└──────┴────────────┴──────────┴──────────┴───────────┴────────┴──────────────────────────────┘'
-      );
+      console.log('  └──────┴────────────────────────┴──────────┴───────────┴──────────┴───────────┴──────────────────────┘');
       console.log();
     }
 
-    // Hard subsection
-    const hard = hardExpert.filter(r => r.newDifficulty === 'hard');
+    const hard = hardExpert.filter(r => classifyByLogicalDepth(r) === 'hard');
     if (hard.length > 0) {
-      console.log(`HARD (${hard.length}):`);
+      console.log(`  HARD (${hard.length}):`);
       console.log();
-      console.log(
-        '┌──────┬────────────┬──────────┬──────────┬───────────┬────────┬──────────────────────────────┐'
-      );
-      console.log(
-        '│ ID   │ Name       │ Original │ Depth    │ Chain     │ Solved │ Reason                       │'
-      );
-      console.log(
-        '├──────┼────────────┼──────────┼──────────┼───────────┼────────┼──────────────────────────────┤'
-      );
-      for (const r of hard.sort((a,b) => b.logicalDepth - a.logicalDepth || b.maxChainDepth - a.maxChainDepth)) {
-        const nm = r.name.length > 11 ? r.name.slice(0,8)+'...' : r.name.padEnd(11);
+      console.log('  ┌──────┬────────────────────────┬──────────┬───────────┬──────────┬───────────┬──────────────────────┐');
+      console.log('  │ ID   │ Name                   │ Original │ Depth     │ Avg Chain│ % ≥ Depth2│ Reason               │');
+      console.log('  ├──────┼────────────────────────┼──────────┼───────────┼──────────┼───────────┼──────────────────────┤');
+      for (const r of hard.sort((a, b) => b.logicalDepth - a.logicalDepth)) {
+        const nm = r.name.length > 22 ? r.name.slice(0, 19) + '...' : r.name.padEnd(22);
         const reasons = [];
-        if (r.chainLength >= 5) reasons.push('chain≥5');
-        if (r.logicalDepth >= 5 && r.needsBacktracking) reasons.push('d≥5+bt');
-        if (r.logicalDepth >= 5 && r.chainLength >= 4) reasons.push('d≥5+c≥4');
+        if (r.logicalDepth >= 4) reasons.push(`depth=${r.logicalDepth}`);
+        if (r.needsBacktracking) reasons.push('bt');
+        if (r.pctDepthGe2 >= 25) reasons.push(`%≥2=${r.pctDepthGe2}%`);
         const reason = reasons.join(', ') || 'N/A';
-        console.log(
-          `│ ${String(r.id).padEnd(4)}  │ ${nm} │ ${r.originalDifficulty.padEnd(8)} │ ${String(r.logicalDepth).padEnd(8)} │ ${String(r.chainLength).padEnd(7)} │ ${r.solved?'Solved':'BT'}     │ ${reason.padEnd(30)} │`
-        );
+        console.log(`  │ ${String(r.id).padEnd(4)}  │ ${nm} │ ${r.originalDifficulty.padEnd(8)} │ ${String(r.logicalDepth).padEnd(9)} │ ${String(r.avgChainLength).padEnd(8)} │ ${String(r.pctDepthGe2).padEnd(7)}% │ ${reason.padEnd(22)} │`);
       }
-      console.log(
-        '└──────┴────────────┴──────────┴──────────┴───────────┴────────┴──────────────────────────────┘'
-      );
+      console.log('  └──────┴────────────────────────┴──────────┴───────────┴──────────┴───────────┴──────────────────────┘');
       console.log();
     }
   }
 
-  const depths2 = results.map(r=>r.logicalDepth);
-  const solCount2 = results.filter(r=>r.solved).length;
-  const btCount = results.filter(r=>r.needsBacktracking).length;
-  const newRec = results.filter(r=>r.newReclassified);
-  console.log('─'.repeat(115));
-  console.log('Summary:');
-  console.log(`  Total puzzles:              ${results.length}`);
-  console.log(`  Solved by propagation:      ${solCount2}/${results.length}`);
-  console.log(`  Stuck (need backtracking):  ${btCount}/${results.length}`);
-  console.log(`  Avg logical depth:          ${(depths2.reduce((a,b)=>a+b,0)/depths2.length).toFixed(1)} rounds`);
-  console.log(`  Min/Max logical depth:      ${Math.min(...depths2)} / ${Math.max(...depths2)}`);
-  console.log(`  Puzzles reclassified:       ${newRec.length}/${results.length} (new criteria)`);
-  console.log(`  New Hard puzzles:           ${hardExpert.filter(r=>r.newDifficulty==='hard').length}`);
-  console.log(`  New Expert puzzles:         ${hardExpert.filter(r=>r.newDifficulty==='expert').length}`);
-  console.log('═'.repeat(115));
+  // --- Cross-tabulation with original difficulty ---
+  const origG = { easy: [], medium: [], hard: [], expert: [] };
+  for (const r of results) {
+    const g = origG[r.originalDifficulty] || origG.expert;
+    if (Array.isArray(g)) g.push(r);
+  }
 
-  // --- Write classification JSON ---
+  console.log('─'.repeat(110));
+  console.log('  ORIGINAL DIFFICULTY → LOGICAL DEPTH DISTRIBUTION');
+  console.log('─'.repeat(110));
+  console.log();
+  console.log('  ┌──────────────┬──────┬───────────┬───────────┬───────────┬───────────┬──────────┬─────────┐');
+  console.log('  │ Original Diff│  N   │ avgDepth  │ minDepth  │ maxDepth  │ Solved?   │ % avg ≥2 │ BT rate │');
+  console.log('  ├──────────────┼──────┼───────────┼───────────┼───────────┼───────────┼──────────┼─────────┤');
+  for (const diff of ['easy', 'medium', 'hard', 'expert']) {
+    const g = origG[diff];
+    if (!g?.length) continue;
+    const depthsArr = g.map(r => r.logicalDepth);
+    const avg = (depthsArr.reduce((a, b) => a + b, 0) / depthsArr.length).toFixed(2);
+    const mn = Math.min(...depthsArr);
+    const mx = Math.max(...depthsArr);
+    const solPct = ((g.filter(r => r.solved).length / g.length) * 100).toFixed(1);
+    const pct2 = (g.map(r => r.pctDepthGe2).reduce((a, b) => a + b, 0) / g.length).toFixed(1);
+    const btRate = ((g.filter(r => r.needsBacktracking).length / g.length) * 100).toFixed(1);
+    console.log(`  │ ${diff.padEnd(12)} │ ${String(g.length).padEnd(4)} │ ${avg.padEnd(9)} │ ${String(mn).padEnd(9)} │ ${String(mx).padEnd(9)} │ ${solPct.padEnd(7)}% │ ${pct2.padEnd(8)}% │ ${btRate.padEnd(7)}% │`);
+  }
+  console.log('  └──────────────┴──────┴───────────┴───────────┴───────────┴───────────┴──────────┴─────────┘');
+  console.log();
+
+  // --- Write results to JSON ---
   const classificationData = results.map(r => ({
     id: r.id,
     name: r.name,
     originalDifficulty: r.originalDifficulty,
     logicalDepth: r.logicalDepth,
-    chainLength: r.chainLength,
+    avgChainLength: r.avgChainLength,
+    pctDepthGe2: r.pctDepthGe2,
+    pctDepthGe3: r.pctDepthGe3,
     needsBacktracking: r.needsBacktracking,
-    newDifficulty: r.newDifficulty,
-    clueCount: r.clueCount
+    directRounds: r.directRounds,
+    solved: r.solved,
+    clueCount: r.clueCount,
+    depthDistribution: r.depthDistribution,
   }));
+
   fs.writeFileSync(
-    path.join(__dirname, 'logical_depth_classification.json'),
+    path.join(__dirname, 'better_logical_depth.json'),
     JSON.stringify(classificationData, null, 2) + '\n',
     'utf-8'
   );
-  console.log(`\nClassification data written to logical_depth_classification.json`);
+
+  console.log('  Results written to better_logical_depth.json');
+  console.log('═'.repeat(110));
+}
+
+/**
+ * Classify puzzle by its logical depth metrics.
+ */
+function classifyByLogicalDepth(analysis) {
+  if (typeof analysis === 'object' && analysis.logicalDepth !== undefined) {
+    analysis = { logicalDepth: analysis.logicalDepth, avgChainLength: analysis.avgChainLength, pctDepthGe2: analysis.pctDepthGe2, needsBacktracking: analysis.needsBacktracking };
+  }
+
+  const { logicalDepth, pctDepthGe2, needsBacktracking } = analysis;
+
+  // Expert: deep reasoning chains (≥6) OR high percentage of deep cells with backtracking
+  if (logicalDepth >= 7) return 'expert';
+  if (logicalDepth >= 6 && pctDepthGe2 >= 40) return 'expert';
+  if (logicalDepth >= 6 && needsBacktracking) return 'expert';
+
+  // Hard: moderate depth with significant deep cells
+  if (logicalDepth >= 5 && pctDepthGe2 >= 30) return 'hard';
+  if (logicalDepth >= 5 && needsBacktracking) return 'hard';
+  if (logicalDepth >= 4 && pctDepthGe2 >= 50) return 'hard';
+
+  // Medium: some depth but mostly straightforward
+  if (logicalDepth >= 3) return 'medium';
+  if (logicalDepth >= 2 && pctDepthGe2 >= 20) return 'medium';
+
+  // Easy: shallow reasoning
+  return 'easy';
 }
 
 main();

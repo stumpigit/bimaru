@@ -31,17 +31,25 @@ function summarizePuzzle(p){
     solverCalls: p.meta?.solverCalls ?? null,
     bridge: p.meta?.harborBridgeCount ?? null,
     zeroLines: p.meta?.zeroLines ?? null,
+    logicalDepth: p.meta?.logicalDepth ?? 0,
+    pctDepthGe2: p.meta?.pctDepthGe2 ?? 0,
+    needsBacktracking: p.meta?.needsBacktracking ?? false,
   };
 }
 
 function classifyDifficulty(s){
-  if(s.clues <= 5 && s.islandClues >= 3 && s.solverCalls > 50000) return 'expert';
-  if(s.clues <= 5 && s.islandClues >= 2 && (s.bridge ?? 0) >= 2) return 'expert';
-  if(s.clues <= 6 && s.islandClues >= 2 && s.solverCalls > 30000 && (s.bridge ?? 0) >= 2) return 'hard';
-  if(s.clues >= 6 && s.clues <= 7 && s.islandClues >= 2 && (s.bridge ?? 0) >= 2) return 'hard';
-  if(s.clues >= 7 && s.clues <= 9 && s.islandClues >= 1) return 'medium';
-  if(s.islandClues === 0 && s.clues >= 9) return 'easy';
-  if(s.islandClues >= 1) return 'medium';
+  // Depth-based rules from logical_depth_score.js
+  const ld = s.logicalDepth ?? 0;
+  const pg2 = s.pctDepthGe2 ?? 0;
+  const bt = s.needsBacktracking ?? false;
+  
+  if (ld >= 7) return 'expert';
+  if (ld >= 6 && pg2 >= 40) return 'expert';
+  if (ld >= 5 && pg2 >= 30) return 'hard';
+  if (ld >= 5 && bt) return 'hard';
+  if (ld >= 4 && pg2 >= 50) return 'hard';
+  if (ld >= 3) return 'medium';
+  if (ld >= 2 && pg2 >= 20) return 'medium';
   return 'easy';
 }
 

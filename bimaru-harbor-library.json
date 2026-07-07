@@ -255,7 +255,8 @@
       "logicalDepth": 8,
       "chainLength": 1.47,
       "pctDepthGe2": 12.3,
-      "pctDepthGe3": 7.4
+      "pctDepthGe3": 7.4,
+      "clueCount": 9
     },
     "difficulty": "expert",
     "id": 2,
@@ -393,7 +394,7 @@
       "pctDepthGe2": 1.2,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "id": 3,
     "name": "ARCHIPELAGO #1"
   },
@@ -668,7 +669,7 @@
       "pctDepthGe2": 3.7,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "id": 5,
     "name": "ARCHIPELAGO #6"
   },
@@ -794,7 +795,7 @@
       "harborBridgeCount": 4,
       "zeroLines": 0,
       "score": 82,
-      "clueCount": 5,
+      "clueCount": 6,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 7905,
@@ -804,7 +805,7 @@
       "pctDepthGe2": 3.7,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #4"
   },
   {
@@ -929,7 +930,7 @@
       "harborBridgeCount": 5,
       "zeroLines": 0,
       "score": 102,
-      "clueCount": 5,
+      "clueCount": 6,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 29434,
@@ -1064,7 +1065,7 @@
       "harborBridgeCount": 5,
       "zeroLines": 1,
       "score": 132,
-      "clueCount": 5,
+      "clueCount": 6,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 3728,
@@ -1074,7 +1075,7 @@
       "pctDepthGe2": 8.6,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #7"
   },
   {
@@ -1199,7 +1200,7 @@
       "harborBridgeCount": 5,
       "zeroLines": 1,
       "score": 118,
-      "clueCount": 5,
+      "clueCount": 6,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 21275,
@@ -1334,7 +1335,7 @@
       "harborBridgeCount": 5,
       "zeroLines": 1,
       "score": 118,
-      "clueCount": 5,
+      "clueCount": 6,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 22585,
@@ -1344,7 +1345,7 @@
       "pctDepthGe2": 25.9,
       "pctDepthGe3": 0
     },
-    "difficulty": "expert",
+    "difficulty": "medium",
     "name": "Harbor #10"
   },
   {
@@ -1469,7 +1470,7 @@
       "harborBridgeCount": 5,
       "zeroLines": 2,
       "score": 148,
-      "clueCount": 5,
+      "clueCount": 6,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 24890,
@@ -1479,7 +1480,7 @@
       "pctDepthGe2": 6.2,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #12"
   },
   {
@@ -1605,7 +1606,7 @@
       "harborBridgeCount": 3,
       "zeroLines": 0,
       "score": 200,
-      "clueCount": 5,
+      "clueCount": 7,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 7554,
@@ -1615,7 +1616,7 @@
       "pctDepthGe2": 6.2,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #14"
   },
   {
@@ -1741,7 +1742,7 @@
       "harborBridgeCount": 5,
       "zeroLines": 1,
       "score": 208,
-      "clueCount": 5,
+      "clueCount": 7,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 20695,
@@ -1751,7 +1752,7 @@
       "pctDepthGe2": 8.6,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #15"
   },
   {
@@ -1877,7 +1878,7 @@
       "harborBridgeCount": 5,
       "zeroLines": 0,
       "score": 178,
-      "clueCount": 5,
+      "clueCount": 7,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 29666,
@@ -2012,7 +2013,7 @@
       "harborBridgeCount": 4,
       "zeroLines": 2,
       "score": 114,
-      "clueCount": 5,
+      "clueCount": 6,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 5788,
@@ -2022,7 +2023,7 @@
       "pctDepthGe2": 2.5,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #19"
   },
   {
@@ -2147,7 +2148,7 @@
       "harborBridgeCount": 4,
       "zeroLines": 1,
       "score": 112,
-      "clueCount": 5,
+      "clueCount": 6,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 14758,
@@ -2157,7 +2158,7 @@
       "pctDepthGe2": 14.8,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #23"
   },
   {
@@ -2283,7 +2284,7 @@
       "harborBridgeCount": 5,
       "zeroLines": 1,
       "score": 208,
-      "clueCount": 5,
+      "clueCount": 7,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 23688,
@@ -2293,7 +2294,7 @@
       "pctDepthGe2": 32.1,
       "pctDepthGe3": 2.5
     },
-    "difficulty": "expert",
+    "difficulty": "medium",
     "name": "Harbor #29"
   },
   {
@@ -2421,7 +2422,7 @@
       "harborBridgeCount": 5,
       "zeroLines": 1,
       "score": 388,
-      "clueCount": 5,
+      "clueCount": 9,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 9960,
@@ -2431,7 +2432,7 @@
       "pctDepthGe2": 12.3,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #1"
   },
   {
@@ -2558,7 +2559,7 @@
       "harborBridgeCount": 5,
       "zeroLines": 1,
       "score": 263,
-      "clueCount": 5,
+      "clueCount": 8,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 24141,
@@ -2568,7 +2569,7 @@
       "pctDepthGe2": 16,
       "pctDepthGe3": 6.2
     },
-    "difficulty": "hard",
+    "difficulty": "medium",
     "name": "Harbor #2"
   },
   {
@@ -2695,7 +2696,7 @@
       "harborBridgeCount": 4,
       "zeroLines": 0,
       "score": 423,
-      "clueCount": 5,
+      "clueCount": 8,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 679,
@@ -2705,7 +2706,7 @@
       "pctDepthGe2": 6.2,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #3"
   },
   {
@@ -2830,7 +2831,7 @@
       "harborBridgeCount": 4,
       "zeroLines": 2,
       "score": 296,
-      "clueCount": 5,
+      "clueCount": 6,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 18281,
@@ -2967,7 +2968,7 @@
       "harborBridgeCount": 4,
       "zeroLines": 0,
       "score": 430,
-      "clueCount": 5,
+      "clueCount": 8,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 18471,
@@ -3106,7 +3107,7 @@
       "harborBridgeCount": 5,
       "zeroLines": 2,
       "score": 466,
-      "clueCount": 5,
+      "clueCount": 10,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 29164,
@@ -3116,7 +3117,7 @@
       "pctDepthGe2": 2.5,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #11"
   },
   {
@@ -3244,7 +3245,7 @@
       "harborBridgeCount": 4,
       "zeroLines": 2,
       "score": 370,
-      "clueCount": 5,
+      "clueCount": 9,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 27422,
@@ -3254,7 +3255,7 @@
       "pctDepthGe2": 22.2,
       "pctDepthGe3": 7.4
     },
-    "difficulty": "hard",
+    "difficulty": "medium",
     "name": "Harbor #13"
   },
   {
@@ -3381,7 +3382,7 @@
       "harborBridgeCount": 3,
       "zeroLines": 2,
       "score": 308,
-      "clueCount": 5,
+      "clueCount": 8,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 9462,
@@ -3516,7 +3517,7 @@
       "harborBridgeCount": 4,
       "zeroLines": 1,
       "score": 266,
-      "clueCount": 5,
+      "clueCount": 6,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 28200,
@@ -3656,7 +3657,7 @@
       "harborBridgeCount": 5,
       "zeroLines": 1,
       "score": 519,
-      "clueCount": 5,
+      "clueCount": 11,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 393,
@@ -3793,7 +3794,7 @@
       "harborBridgeCount": 4,
       "zeroLines": 2,
       "score": 280,
-      "clueCount": 5,
+      "clueCount": 8,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 26101,
@@ -3803,7 +3804,7 @@
       "pctDepthGe2": 2.5,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #21"
   },
   {
@@ -3928,7 +3929,7 @@
       "harborBridgeCount": 4,
       "zeroLines": 2,
       "score": 282,
-      "clueCount": 5,
+      "clueCount": 6,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 1382,
@@ -4066,7 +4067,7 @@
       "harborBridgeCount": 5,
       "zeroLines": 0,
       "score": 344,
-      "clueCount": 5,
+      "clueCount": 9,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 7724,
@@ -4076,7 +4077,7 @@
       "pctDepthGe2": 16,
       "pctDepthGe3": 8.6
     },
-    "difficulty": "hard",
+    "difficulty": "medium",
     "name": "Harbor #24"
   },
   {
@@ -4202,7 +4203,7 @@
       "harborBridgeCount": 4,
       "zeroLines": 1,
       "score": 342,
-      "clueCount": 5,
+      "clueCount": 7,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 22183,
@@ -4212,7 +4213,7 @@
       "pctDepthGe2": 3.7,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #25"
   },
   {
@@ -4337,7 +4338,7 @@
       "harborBridgeCount": 4,
       "zeroLines": 1,
       "score": 280,
-      "clueCount": 5,
+      "clueCount": 6,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 5815,
@@ -4347,7 +4348,7 @@
       "pctDepthGe2": 12.3,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #26"
   },
   {
@@ -4472,7 +4473,7 @@
       "harborBridgeCount": 4,
       "zeroLines": 0,
       "score": 250,
-      "clueCount": 5,
+      "clueCount": 6,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 22194,
@@ -4612,7 +4613,7 @@
       "harborBridgeCount": 3,
       "zeroLines": 1,
       "score": 520,
-      "clueCount": 5,
+      "clueCount": 11,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 3144,
@@ -4622,7 +4623,7 @@
       "pctDepthGe2": 13.6,
       "pctDepthGe3": 4.9
     },
-    "difficulty": "hard",
+    "difficulty": "medium",
     "name": "Harbor #28"
   },
   {
@@ -4750,7 +4751,7 @@
       "harborBridgeCount": 4,
       "zeroLines": 1,
       "score": 333,
-      "clueCount": 5,
+      "clueCount": 9,
       "uniqueChecked": true,
       "uniquenessExact": true,
       "solverCalls": 25358,
@@ -4760,7 +4761,7 @@
       "pctDepthGe2": 1.2,
       "pctDepthGe3": 0
     },
-    "difficulty": "medium",
+    "difficulty": "easy",
     "name": "Harbor #30"
   }
 ]
