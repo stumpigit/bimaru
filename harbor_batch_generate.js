@@ -1,19 +1,31 @@
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
+
 const hw = path.join(__dirname, 'bimaru-harbor.html');
+const depthPath = path.join(__dirname, 'logical_depth_score.js');
 const html = fs.readFileSync(hw, 'utf8');
 let js = html.match(/<script>([\s\S]*)<\/script>/)[1];
 js = js.replace("document.addEventListener('mouseup',()=>{drag=false; wasDrag=false;});", '');
 js = js.replace(/newGame\(\);\s*$/, '');
 
 const bootstrap = `
-const dummyEl=()=>({textContent:'',className:'',innerHTML:'',addEventListener(){},appendChild(){},classList:{add(){},remove(){}},dataset:{}});
+const dummyEl=()=>({textContent:'',className:'',innerHTML:'',addEventListener(){},appendChild(){},classList:{add(){},remove(){}},dataset:{},style:{}});
 global.document={getElementById(){return dummyEl();},querySelector(){return dummyEl();},querySelectorAll(){return [];},addEventListener(){},createElement(){return dummyEl();}};
 global.window=globalThis;
 `;
 eval(bootstrap + js);
 
-function summarizePuzzle(p){
+let depthCode = fs.readFileSync(depthPath, 'utf8');
+depthCode = depthCode.replace(/main\(\);\s*$/, 'module.exports = { analyzePuzzle, classifyByLogicalDepth };');
+const depthSandbox = { console, require, module: { exports: {} }, exports: {}, __dirname, __filename: depthPath };
+vm.createContext(depthSandbox);
+vm.runInContext(depthCode, depthSandbox, { filename: depthPath });
+const { analyzePuzzle, classifyByLogicalDepth } = depthSandbox.module.exports;
+
+const labels = { easy: '⭐ Einfach', medium: '⭐⭐ Mittel', hard: '⭐⭐⭐ Schwer', expert: '⭐⭐⭐⭐ Experte' };
+
+function summarizePuzzle(p, analysis){
   const vals = Object.values(p.cl || {});
   const dep = p.meta?.islandDependency || islandDependencyReport(p);
   return {
@@ -23,6 +35,7 @@ function summarizePuzzle(p){
     singles: vals.filter(v=>v==='s').length,
     ends: vals.filter(v=>v==='e').length,
     mids: vals.filter(v=>v==='m').length,
+    water: vals.filter(v=>v==='w').length,
     islandVals: vals.filter(v=>/^i/.test(v)).map(v=>Number(v.slice(1))).sort((a,b)=>a-b),
     noIslandSolutions: dep.solutions,
     noIslandExact: dep.exact,
@@ -31,149 +44,209 @@ function summarizePuzzle(p){
     solverCalls: p.meta?.solverCalls ?? null,
     bridge: p.meta?.harborBridgeCount ?? null,
     zeroLines: p.meta?.zeroLines ?? null,
-    logicalDepth: p.meta?.logicalDepth ?? 0,
-    pctDepthGe2: p.meta?.pctDepthGe2 ?? 0,
-    needsBacktracking: p.meta?.needsBacktracking ?? false,
+    logicalDepth: analysis?.logicalDepth ?? 0,
+    pctDepthGe2: analysis?.pctDepthGe2 ?? 0,
+    pctDepthGe3: analysis?.pctDepthGe3 ?? 0,
+    avgChainLength: analysis?.avgChainLength ?? 0,
+    needsBacktracking: analysis?.needsBacktracking ?? false,
   };
 }
 
-function classifyDifficulty(s){
-  // Depth-based rules from logical_depth_score.js
-  const ld = s.logicalDepth ?? 0;
-  const pg2 = s.pctDepthGe2 ?? 0;
-  const bt = s.needsBacktracking ?? false;
-  
-  if (ld >= 7) return 'expert';
-  if (ld >= 6 && pg2 >= 40) return 'expert';
-  if (ld >= 5 && pg2 >= 30) return 'hard';
-  if (ld >= 5 && bt) return 'hard';
-  if (ld >= 4 && pg2 >= 50) return 'hard';
-  if (ld >= 3) return 'medium';
-  if (ld >= 2 && pg2 >= 20) return 'medium';
-  return 'easy';
+function strengthScore(summary){
+  let score = 0;
+  score += summary.logicalDepth * 1000;
+  score += summary.pctDepthGe3 * 80;
+  score += summary.pctDepthGe2 * 30;
+  score += summary.avgChainLength * 150;
+  score += Math.min(250, (summary.solverCalls || 0) / 150);
+  score -= summary.clues * 25;
+  score -= summary.shipClues * 18;
+  score -= summary.singles * 70;
+  score -= summary.water * 120;
+  if (summary.islandVals.some(v => v >= 3)) score += 80;
+  if (summary.needsBacktracking) score += 100;
+  return Math.round(score);
 }
 
-const labels = { easy: '⭐ Einfach', medium: '⭐⭐ Mittel', hard: '⭐⭐⭐ Schwer', expert: '⭐⭐⭐⭐ Experte' };
-
-// Add clues until puzzle is unique, then minimize
 function makeUniquePuzzle(harbor){
-  let puz = createInitialPuzzle(harbor);
-  puz.meta.zeroLines = zeroLinesScore({r:puz.rc, c:puz.cc});
-  
-  // Add ship clues until unique
-  let flat = puz.grid;
-  let shipCells = [];
-  for(let i=0;i<N*N;i++){ if(flat[i]===SH) shipCells.push(i); }
-  let waterCells = [];
-  for(let i=0;i<N*N;i++){ if(flat[i]===WA) waterCells.push(i); }
-  
-  let allClueCandidates = shipCells.map(i=>({
-    i, t: clueTypeForCell(flat, Math.floor(i/N), i%N)
-  })).filter(c => !isIslandClueType(puz.cl[c.i] || puz.cl[c.i]===undefined));
-  
-  // Shuffle and add clues one at a time until unique
-  shuffle(allClueCandidates);
-  for(let c of allClueCandidates){
-    puz.cl[c.i] = c.t;
-    let check = countSolutionsForPuzzle(puz, 2, 30000);
-    if(check.exact && check.solutions === 1){
+  let base = createInitialPuzzle(harbor);
+  let islandVals = Object.values(base.cl).filter(v=>/^i/.test(v)).map(v=>Number(v.slice(1)));
+  if(islandVals.length < 2 || !islandVals.some(v=>v>=3)) return null;
+
+  let flat = base.grid;
+  let islandCells = Object.keys(base.cl)
+    .filter(k => /^i/.test(base.cl[k]))
+    .map(k => ({ r: Math.floor(Number(k)/N), c: Number(k)%N }));
+
+  let candidates = [];
+  for(let i=0;i<N*N;i++){
+    if(flat[i]!==SH) continue;
+    if(base.cl[i] !== undefined) continue;
+    let r=Math.floor(i/N), c=i%N;
+    let t=clueTypeForCell(flat, r, c);
+    let nearIsland=0;
+    for(let isl of islandCells) if(Math.abs(isl.r-r)+Math.abs(isl.c-c)===1) nearIsland++;
+    let centrality=8-(Math.abs(r-4)+Math.abs(c-4));
+    let weight=(t==='m'?50:t==='e'?32:10) + nearIsland*24 + centrality;
+    candidates.push({ i, t, weight, nearIsland, centrality });
+  }
+
+  candidates.sort((a,b)=>b.weight-a.weight || a.i-b.i);
+  let variants = [
+    candidates.filter(c=>c.t!=='s').concat(candidates.filter(c=>c.t==='s')),
+    candidates.filter(c=>c.t==='e').concat(candidates.filter(c=>c.t==='m')).concat(candidates.filter(c=>c.t==='s')),
+    candidates.filter(c=>c.t==='m' && c.nearIsland>0).concat(candidates.filter(c=>c.t==='e' && c.nearIsland>0)).concat(candidates.filter(c=>c.t==='m' && c.nearIsland===0)).concat(candidates.filter(c=>c.t==='e' && c.nearIsland===0)).concat(candidates.filter(c=>c.t==='s'))
+  ];
+
+  let best = null;
+  let bestScore = -Infinity;
+  let fallback = null;
+  let fallbackScore = -Infinity;
+
+  for(let ordered of variants){
+    for(let targetClues=7; targetClues<=14; targetClues++){
+      let puz = clonePuzzle(base);
+      for(let cand of ordered){
+        if(Object.keys(puz.cl).length >= targetClues) break;
+        puz.cl[cand.i] = cand.t;
+      }
+      let check = countSolutionsForPuzzle(puz, 2, 30000);
+      if(!(check.exact && check.solutions === 1)) continue;
+
       puz.meta.uniqueChecked = true;
       puz.meta.uniquenessExact = true;
       puz.meta.solverCalls = check.calls;
-      return puz;
+      puz.meta.clueCount = Object.keys(puz.cl).length;
+
+      let dep = islandDependencyReport(puz);
+      let analysis = analyzePuzzle(puz);
+      let summary = summarizePuzzle(puz, analysis);
+      let score = strengthScore(summary);
+
+      puz.meta.islandDependency = dep;
+      puz.meta.score = score;
+      puz.meta.logicalDepth = analysis.logicalDepth;
+      puz.meta.chainLength = analysis.avgChainLength;
+      puz.meta.pctDepthGe2 = analysis.pctDepthGe2;
+      puz.meta.pctDepthGe3 = analysis.pctDepthGe3;
+      puz.meta.needsBacktracking = analysis.needsBacktracking;
+
+      if(score > fallbackScore){
+        fallback = puz;
+        fallbackScore = score;
+      }
+
+      if(summary.islandClues < 2) continue;
+      if(summary.water > 0) continue;
+      if(summary.shipClues < 5 || summary.shipClues > 10) continue;
+      if(summary.clues < 7 || summary.clues > 14) continue;
+      if(summary.singles > 2) continue;
+      if(!summary.islandVals.some(v => v >= 3)) continue;
+      if(!dep.essential || !dep.exact) continue;
+
+      if(score > bestScore || (score === bestScore && summary.clues < Object.keys(best?.cl || {}).length)){
+        best = puz;
+        bestScore = score;
+      }
     }
   }
-  return null; // couldn't make unique
+
+  return best || fallback;
 }
 
-function quickGenerate(tries=10, mLoops=1){
+function quickGenerate(tries=3){
   let best = null;
-  let bestScore = Infinity;
+  let bestScore = -Infinity;
   for(let t=0; t<tries; t++){
     let harbor = genHarborSolution();
     if(!harbor) continue;
-    let base = makeUniquePuzzle(harbor);
-    if(!base) continue;
-    base.meta.score = cheapScorePuzzle(base);
-    if(base.meta.score < bestScore){
-      best = base;
-      bestScore = base.meta.score;
-    }
-    for(let m=0; m<mLoops; m++){
-      let candidate = minimizePuzzle(base) || base;
-      candidate = stripTrivialWaterClues(candidate);
-      let finalCheck = countSolutionsForPuzzle(candidate, 2, 30000);
-      if(!(finalCheck.exact && finalCheck.solutions===1)) continue;
-      candidate.meta.uniqueChecked = true;
-      candidate.meta.uniquenessExact = true;
-      candidate.meta.solverCalls = finalCheck.calls;
-      candidate.meta.zeroLines = zeroLinesScore({r:candidate.rc,c:candidate.cc});
-      candidate = strengthenIslandDependency(candidate) || candidate;
-      let dep = candidate.meta?.islandDependency || islandDependencyReport(candidate);
-      if(!dep.essential || !dep.exact || dep.solutions < 2) continue;
-      candidate.meta.islandDependency = dep;
-      candidate.meta.clueCount = Object.keys(candidate.cl).length;
-      candidate.meta.score = finalScorePuzzle(candidate, dep);
-      const shipClues = Object.values(candidate.cl).filter(v=>v==='s'||v==='e'||v==='m').length;
-      const islandVals = Object.values(candidate.cl).filter(v=>/^i/.test(v)).map(v=>Number(v.slice(1)));
-      if(shipClues > 3) continue;
-      if(candidate.meta.clueCount > 6) continue;
-      if(!islandVals.some(v=>v>=3)) continue;
-      if(candidate.meta.score < bestScore){
-        best = candidate;
-        bestScore = candidate.meta.score;
-      }
-      if(candidate.meta.clueCount <= 5 && countIslandClues(candidate.cl) >= 2 && shipClues <= 3) return best;
+    let candidate = makeUniquePuzzle(harbor);
+    if(!candidate) continue;
+    let dep = candidate.meta?.islandDependency || islandDependencyReport(candidate);
+    if(!dep.essential || !dep.exact) continue;
+    candidate.meta.islandDependency = dep;
+    candidate.meta.clueCount = Object.keys(candidate.cl).length;
+
+    const analysis = analyzePuzzle(candidate);
+    const summary = summarizePuzzle(candidate, analysis);
+
+    if(summary.islandClues < 2) continue;
+    if(summary.water > 0) continue;
+    if(summary.shipClues < 5 || summary.shipClues > 10) continue;
+    if(summary.clues < 7 || summary.clues > 14) continue;
+    if(summary.singles > 2) continue;
+    if(!summary.islandVals.some(v => v >= 3)) continue;
+    if(!(analysis.logicalDepth >= 4 || analysis.pctDepthGe3 >= 6 || (analysis.logicalDepth >= 3 && analysis.pctDepthGe2 >= 18 && summary.shipClues <= 10))) continue;
+
+    const score = strengthScore(summary);
+    candidate.meta.score = score;
+    candidate.meta.logicalDepth = analysis.logicalDepth;
+    candidate.meta.chainLength = analysis.avgChainLength;
+    candidate.meta.pctDepthGe2 = analysis.pctDepthGe2;
+    candidate.meta.pctDepthGe3 = analysis.pctDepthGe3;
+    candidate.meta.needsBacktracking = analysis.needsBacktracking;
+
+    if(score > bestScore){
+      best = { puzzle: candidate, analysis, summary, score };
+      bestScore = score;
     }
   }
   return best;
 }
 
-const target = Number(process.argv[2] || 30);
-const outPath = path.join(__dirname, 'hard_puzzles_generated.json');
+const target = Number(process.argv[2] || 12);
+const outPath = path.resolve(process.argv[3] || path.join(__dirname, 'hard_puzzles_generated.json'));
 const results = [];
 const seenSigs = new Set();
 const startTime = Date.now();
 
 console.log('=== Harbor Hard Puzzle Generator (batch mode) ===');
-console.log('Target: ' + target + ' puzzles\n');
+console.log('Target: ' + target + ' puzzles');
+console.log('Output: ' + outPath + '\n');
 
 for(let i = 0; i < 200 && results.length < target; i++){
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-  if(elapsed > 1200){
+  if(elapsed > 1800){
     console.log('\nTime limit reached (' + elapsed + 's), stopping.');
     break;
   }
-  
+
   const t0 = Date.now();
-  const puzzle = quickGenerate(5, 0);
+  const result = quickGenerate(3);
   const ms = Date.now() - t0;
-  
-  if(!puzzle){
-    if(i % 10 === 0) console.log('  Attempt ' + (i+1) + ': null (' + ms + 'ms)');
+
+  if(!result){
+    console.log('  Attempt ' + (i+1) + ': null (' + ms + 'ms)');
     continue;
   }
-  
+
+  const { puzzle, analysis, summary, score } = result;
   const sig = JSON.stringify({
     rc: puzzle.rc,
     cc: puzzle.cc,
     cl: Object.entries(puzzle.cl).sort((a,b)=>Number(a[0])-Number(b[0]))
   });
   if(seenSigs.has(sig)){
+    console.log('  Attempt ' + (i+1) + ': duplicate (' + ms + 'ms)');
     continue;
   }
   seenSigs.add(sig);
-  
-  const summary = summarizePuzzle(puzzle);
-  const classif = classifyDifficulty(summary);
+
+  const diff = classifyByLogicalDepth(analysis);
   const diffOrder = { expert: 0, hard: 1, medium: 2, easy: 3 };
-  summary.difficulty = classif;
-  summary.difficultyOrder = diffOrder[classif];
-  
-  if(i % 5 === 0 || results.length < 5){
-    console.log('  Attempt ' + (i+1) + ': clues=' + summary.clues + ' islands=' + summary.islandClues + ' bridges=' + summary.bridge + ' calls=' + summary.solverCalls + ' → ' + classif + ' (' + ms + 'ms)');
-  }
-  
+
+  console.log(
+    '  Attempt ' + (i+1) + ': clues=' + summary.clues +
+    ' islands=' + summary.islandClues +
+    ' ship=' + summary.shipClues +
+    ' depth=' + summary.logicalDepth +
+    ' p>=2=' + summary.pctDepthGe2 +
+    ' calls=' + summary.solverCalls +
+    ' → ' + diff +
+    ' score=' + score +
+    ' (' + ms + 'ms)'
+  );
+
   results.push({
     id: results.length,
     grid: puzzle.grid,
@@ -181,16 +254,17 @@ for(let i = 0; i < 200 && results.length < target; i++){
     cc: puzzle.cc,
     cl: puzzle.cl,
     meta: Object.assign({}, puzzle.meta, { sampleIndex: results.length }),
-    difficulty: classif,
-    difficultyOrder: diffOrder[classif],
+    difficulty: diff,
+    difficultyOrder: diffOrder[diff],
     name: 'Harbor #' + (results.length + 1)
   });
-  
-  if(results.length >= target) break;
+
+  fs.writeFileSync(outPath, JSON.stringify(results, null, 2));
 }
 
-results.sort((a,b) => (a.difficultyOrder || 4) - (b.difficultyOrder || 4));
+results.sort((a,b) => (a.difficultyOrder || 4) - (b.difficultyOrder || 4) || ((b.meta?.score || 0) - (a.meta?.score || 0)));
 results.forEach((r,i) => r.id = i);
+fs.writeFileSync(outPath, JSON.stringify(results, null, 2));
 
 console.log('\n=== Found ' + results.length + ' unique puzzles ===');
 const counts = {};
@@ -199,8 +273,13 @@ console.log('  Difficulty: ' + JSON.stringify(counts));
 
 for(let i = 0; i < results.length; i++){
   const p = results[i];
-  console.log('  ' + (i+1) + '. ' + p.name + ': ' + p.difficulty + ' score=' + p.meta?.score + ' clues=' + p.meta?.clueCount + ' islands=' + Object.values(p.cl).filter(v=>/^i/.test(v)).length);
+  console.log(
+    '  ' + (i+1) + '. ' + p.name + ': ' + labels[p.difficulty] +
+    ' depth=' + (p.meta?.logicalDepth ?? '?') +
+    ' clues=' + Object.keys(p.cl).length +
+    ' ship=' + Object.values(p.cl).filter(v=>v==='s'||v==='e'||v==='m').length +
+    ' score=' + (p.meta?.score ?? '?')
+  );
 }
 
-fs.writeFileSync(outPath, JSON.stringify(results, null, 2));
 console.log('\nSaved ' + results.length + ' puzzles to ' + outPath);

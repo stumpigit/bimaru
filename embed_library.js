@@ -49,15 +49,16 @@ const libraryJson = JSON.stringify(library);
 // ── Replace ARCHIPELAGO_LIBRARY inline definition ──────────────────
 
 const libraryRegex = /(var ARCHIPELAGO_LIBRARY=\[)(\s|\S)*?(\];)/;
+const libraryMatch = html.match(libraryRegex);
+
+if (!libraryMatch) {
+  console.error('ERROR: Could not find ARCHIPELAGO_LIBRARY in HTML');
+  process.exit(1);
+}
 
 const replacement = `var ARCHIPELAGO_LIBRARY=${libraryJson};`;
 
 let newHtml = html.replace(libraryRegex, replacement);
-
-if (newHtml === html) {
-  console.error('ERROR: Could not find ARCHIPELAGO_LIBRARY in HTML');
-  process.exit(1);
-}
 
 // ── Update filter button counts ────────────────────────────────────
 
@@ -108,16 +109,10 @@ for (const diff of ['easy', 'medium', 'hard', 'expert']) {
   );
 }
 
-// Replace the "All" count
+// Replace the "All" button count using the concrete rendered label
 filterHtml = filterHtml.replace(
-  /(<button[^>]*data-diff="all"[^>]*>[^\\(]*)\\([0-9]+\\)/,
+  /(<button[^>]*data-diff="all"[^>]*>Alle )\([0-9]+\)/,
   '$1(' + totalLabel + ')'
-);
-
-// Also fix the "Alle" button
-filterHtml = filterHtml.replace(
-  /(<button[^>]*data-diff="all"[^>]*>Alle )\\([^)]+\\)/,
-  '$1' + totalLabel + ')'
 );
 
 newHtml = newHtml.replace(filterSectionRegex, filterHtml);
