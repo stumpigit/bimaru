@@ -190,7 +190,7 @@ var deterministicFixture=null;
 var archipelagoPrefetch={worker:null,generating:false,queued:null,lastDurationMs:null,workerUrl:null};
 var solverResultCache=new Map();
 var islandDependencyCache=new Map();
-var ARCHIPELAGO_LIBRARY=[{"id":1,"name":"Harbor Hard #1","difficulty":"expert","grid":[0,0,1,0,1,0,1,0,0,0,0,1,0,0,0,0,0,0,0,1,0,1,0,0,0,1,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,1,1,1,1,0,0,1,0,0,0,0,0,0],"rc":[3,1,4,2,2,1,1,5,1],"cc":[0,1,7,1,1,1,5,2,2],"cl":{"6":"s","11":"e","19":"s","20":"i4","24":"i2","26":"e","29":"e","42":"m","68":"e","69":"m","70":"m"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":1,"harborBridgeCount":5,"zeroLines":1,"score":11284,"clueCount":11,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":393,"sampleIndex":19,"logicalDepth":9,"chainLength":2.24,"pctDepthGe2":22.2,"pctDepthGe3":22.2,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json"}},{"id":2,"name":"Harbor Hard #2","difficulty":"expert","grid":[0,1,1,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,0,1,0,1,0,0,0,1,0,0,0,1,0,0,0,0,1,0,1,0,1,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,1,0,1,0,0],"rc":[3,1,2,3,3,2,2,2,2],"cc":[2,5,2,0,3,0,5,1,2],"cl":{"15":"i3","18":"e","28":"i3","33":"m","46":"m","52":"i1","53":"e","55":"m","67":"m"},"meta":{"sampleIndex":2,"solverCalls":51380,"curated":"manual-minimized-2026-07-01","logicalDepth":8,"chainLength":1.47,"pctDepthGe2":12.3,"pctDepthGe3":7.4,"clueCount":9,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json","score":9179}},{"id":3,"name":"Harbor Hard #3","difficulty":"medium","grid":[0,1,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,1,1,0,1,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,1,0,0,0,1,0,0,1,0,1,0,1,1,0,1,1,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0],"rc":[2,1,5,0,1,3,6,1,1],"cc":[3,1,5,2,2,2,2,2,1],"cl":{"22":"e","23":"i3","24":"e","56":"m","59":"e","60":"i3","61":"e","65":"m","74":"e"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":2,"harborBridgeCount":4,"zeroLines":1,"score":6838,"clueCount":9,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":7610,"islandDependency":{"hasIslands":true,"islandKeys":["23","60"],"exact":true,"solutions":0,"essential":true},"logicalDepth":6,"chainLength":1.29,"pctDepthGe2":12.3,"pctDepthGe3":6.2,"needsBacktracking":false,"sampleIndex":0,"selectedFrom":"hard_puzzles_run_c.json"}},{"id":4,"name":"Harbor Hard #4","difficulty":"medium","grid":[0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,1,1,1,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,1,0,1,1,1,0,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0],"rc":[1,1,6,2,3,1,4,1,1],"cc":[1,2,2,5,2,2,2,0,4],"cl":{"21":"i4","23":"m","30":"e","35":"m","39":"e","53":"e","56":"m","58":"i2"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":1,"harborBridgeCount":5,"zeroLines":1,"score":5102,"clueCount":8,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":24141,"sampleIndex":1,"logicalDepth":4,"chainLength":1.29,"pctDepthGe2":16,"pctDepthGe3":6.2,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json"}},{"id":5,"name":"Harbor Hard #5","difficulty":"medium","grid":[0,0,0,1,0,0,1,0,0,0,0,0,0,0,0,1,0,0,1,0,1,0,0,0,1,0,0,0,0,1,0,0,0,0,1,1,0,1,0,1,1,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,1,0,0,0,0,0,0],"rc":[2,1,3,3,4,1,1,4,1],"cc":[1,1,5,2,1,2,4,2,2],"cl":{"15":"m","20":"e","33":"i2","34":"e","38":"i4","39":"e","41":"e","69":"m","74":"s"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":1,"harborBridgeCount":5,"zeroLines":0,"score":5075,"clueCount":9,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":7724,"sampleIndex":23,"logicalDepth":4,"chainLength":1.31,"pctDepthGe2":16,"pctDepthGe3":8.6,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json"}},{"id":6,"name":"Harbor Hard #6","difficulty":"medium","grid":[0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,0,0,0,0,1,0,0,1,1,1,0,1,0,1,0,1,0,0,0,0,1,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,1,0,1,1,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0],"rc":[2,1,5,3,2,0,4,2,1],"cc":[1,5,2,2,3,1,2,1,3],"cl":{"21":"i2","24":"e","26":"e","28":"m","35":"m","54":"e","55":"e","56":"i3","57":"e","69":"s","74":"e"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":1,"harborBridgeCount":3,"zeroLines":1,"score":4578,"clueCount":11,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":3144,"sampleIndex":27,"logicalDepth":4,"chainLength":1.23,"pctDepthGe2":13.6,"pctDepthGe3":4.9,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json"}},{"id":7,"name":"Harbor Hard #7","difficulty":"medium","grid":[0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,1,1,0,1,0,0,0,0,0,0,0,1,0,0,1,1,0,0,1,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,1,1,1,1,0],"rc":[1,1,1,5,1,4,1,1,5],"cc":[2,2,2,1,3,2,6,2,0],"cl":{"15":"m","24":"e","32":"e","33":"i4","42":"e","46":"e","47":"i2","56":"e","78":"m"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":1,"harborBridgeCount":5,"zeroLines":1,"score":4555,"clueCount":9,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":17639,"islandDependency":{"hasIslands":true,"islandKeys":["33","47"],"exact":true,"solutions":0,"essential":true},"logicalDepth":4,"chainLength":1.17,"pctDepthGe2":11.1,"pctDepthGe3":2.5,"needsBacktracking":false,"sampleIndex":2,"selectedFrom":"hard_puzzles_run_c.json"}},{"id":8,"name":"Harbor Hard #8","difficulty":"medium","grid":[0,0,1,0,1,0,0,0,0,1,0,1,0,0,0,0,0,0,1,0,1,0,0,0,0,1,0,1,0,0,1,1,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,1,0,1,1,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0],"rc":[2,2,3,3,2,4,2,1,1],"cc":[4,0,6,1,4,1,2,2,0],"cl":{"4":"s","18":"m","25":"s","27":"m","29":"i3","31":"e","36":"e","38":"e","51":"i3"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":2,"harborBridgeCount":4,"zeroLines":2,"score":4343,"clueCount":9,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":27422,"sampleIndex":12,"logicalDepth":3,"chainLength":1.42,"pctDepthGe2":22.2,"pctDepthGe3":7.4,"needsBacktracking":true,"selectedFrom":"bimaru-harbor-library.json"}},{"id":9,"name":"Harbor Hard #9","difficulty":"medium","grid":[1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,1,1,0,1,1,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,1,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0],"rc":[4,1,6,1,3,1,3,0,1],"cc":[2,1,5,3,2,3,1,2,1],"cl":{"2":"m","23":"i4","25":"m","41":"e","54":"s","56":"i2","57":"e"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":1,"harborBridgeCount":5,"zeroLines":1,"score":4273,"clueCount":7,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":23688,"sampleIndex":28,"logicalDepth":3,"chainLength":1.38,"pctDepthGe2":32.1,"pctDepthGe3":2.5,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json"}},{"id":10,"name":"Harbor Hard #10","difficulty":"medium","grid":[0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,1,0,0,1,0,1,0,0,0,1,0,1,1,0,1,0,0,0,0,0,0,1,0,0,1,1,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0],"rc":[0,2,3,1,4,2,4,3,1],"cc":[5,0,4,2,2,2,3,1,1],"cl":{"23":"e","24":"i3","33":"e","47":"e","54":"m","56":"i3","57":"e","58":"m","59":"e","65":"e"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":2,"harborBridgeCount":4,"zeroLines":2,"score":3875,"clueCount":10,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":26957,"islandDependency":{"hasIslands":true,"islandKeys":["24","56"],"exact":true,"solutions":0,"essential":true},"logicalDepth":3,"chainLength":1.2,"pctDepthGe2":11.1,"pctDepthGe3":6.2,"needsBacktracking":false,"sampleIndex":1,"selectedFrom":"hard_puzzles_run_c.json"}},{"id":11,"name":"Harbor Hard #11","difficulty":"medium","grid":[0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,0,1,1,1,0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,0,0,1,1,1,0,1,1,1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0],"rc":[1,2,4,1,3,1,6,1,1],"cc":[5,2,1,3,2,1,3,2,1],"cl":{"24":"i2","26":"e","27":"m","48":"e","57":"i4","59":"m"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":1,"harborBridgeCount":5,"zeroLines":0,"score":3536,"clueCount":6,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":29434,"sampleIndex":5,"logicalDepth":3,"chainLength":1.09,"pctDepthGe2":7.4,"pctDepthGe3":1.2,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json"}},{"id":12,"name":"Harbor Hard #12","difficulty":"medium","grid":[0,0,0,1,0,1,1,1,1,0,0,0,1,0,0,0,0,0,0,1,1,0,1,1,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,1,0,0,1,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0],"rc":[5,1,5,1,1,1,4,1,1],"cc":[0,2,2,4,1,5,2,3,1],"cl":{"6":"m","8":"e","21":"i4","57":"i2","59":"e","68":"m"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":1,"harborBridgeCount":5,"zeroLines":1,"score":3509,"clueCount":6,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":21275,"sampleIndex":8,"logicalDepth":3,"chainLength":1.08,"pctDepthGe2":4.9,"pctDepthGe3":2.5,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json"}}];
+var ARCHIPELAGO_LIBRARY=[{"id":1,"name":"Harbor Logic #1","difficulty":"hard","grid":[0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,0,1,0,0,1,0,1,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,1,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,0,0,1,0,0],"rc":[2,2,3,1,4,2,2,3,1],"cc":[0,5,0,3,3,3,4,2,0],"cl":{"16":"s","39":"i3"},"meta":{"style":"one-island-minimal","uniqueChecked":true,"uniquenessExact":true,"solverCalls":632,"clueCount":2,"harborIslands":[[4,3,3]],"sampleIndex":1,"islandIndex":1,"separator":{"i":16,"r":1,"c":7,"clue":"s"},"logicalDepth":3,"chainLength":1.14,"pctDepthGe2":11.1,"pctDepthGe3":2.5,"needsBacktracking":false,"selectedFrom":"one_island_minimal_library.json","score":3698,"curationStyle":"one-island-minimal-v1","depthDifficulty":"medium"}},{"id":2,"name":"Harbor Logic #2","difficulty":"hard","grid":[0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,0,1,0,0,1,0,1,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,1,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,0,0,1,0,0],"rc":[2,2,3,1,4,2,2,3,1],"cc":[0,5,0,3,3,3,4,2,0],"cl":{"25":"w","39":"i3"},"meta":{"style":"one-island-minimal","uniqueChecked":true,"uniquenessExact":true,"solverCalls":10283,"clueCount":2,"harborIslands":[[4,3,3]],"sampleIndex":1,"islandIndex":1,"separator":{"i":25,"r":2,"c":7,"clue":"w"},"logicalDepth":1,"chainLength":1.13,"pctDepthGe2":11.1,"pctDepthGe3":1.2,"needsBacktracking":true,"selectedFrom":"one_island_minimal_library.json","score":2723,"curationStyle":"one-island-minimal-v1","depthDifficulty":"easy"}},{"id":3,"name":"Harbor Logic #3","difficulty":"hard","grid":[0,0,0,0,1,1,0,0,0,0,1,0,0,0,0,0,1,0,0,1,0,1,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,1,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,0,0,1,0,0],"rc":[2,2,3,1,4,2,2,3,1],"cc":[0,5,0,3,3,3,4,2,0],"cl":{"19":"e","39":"i3"},"meta":{"style":"one-island-minimal","uniqueChecked":true,"uniquenessExact":true,"solverCalls":13104,"clueCount":2,"harborIslands":[[4,3,3]],"sampleIndex":1,"islandIndex":1,"separator":{"i":19,"r":2,"c":1,"clue":"e"},"logicalDepth":1,"chainLength":1.03,"pctDepthGe2":2.5,"pctDepthGe3":0,"needsBacktracking":true,"selectedFrom":"one_island_minimal_library.json","score":2402,"curationStyle":"one-island-minimal-v1","depthDifficulty":"easy"}},{"id":4,"name":"Harbor Logic #4","difficulty":"hard","grid":[1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,1,1,0,1,1,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,1,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0],"rc":[4,1,6,1,3,1,3,0,1],"cc":[2,1,5,3,2,3,1,2,1],"cl":{"2":"m","23":"i4","25":"m","41":"e","54":"s","56":"i2","57":"e"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":1,"harborBridgeCount":5,"zeroLines":1,"score":1016,"clueCount":7,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":23688,"sampleIndex":28,"logicalDepth":3,"chainLength":1.38,"pctDepthGe2":32.1,"pctDepthGe3":2.5,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json","curationStyle":"relational-sparse-v1","depthDifficulty":"medium"}},{"id":5,"name":"Harbor Logic #5","difficulty":"medium","grid":[0,0,0,0,0,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,1,0,0,1,1,1,0,0,0,0,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,0,0,1,1,1,0,1,1,1,0,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0],"rc":[1,2,4,1,3,1,6,1,1],"cc":[5,2,1,3,2,1,3,2,1],"cl":{"24":"i2","26":"e","27":"m","48":"e","57":"i4","59":"m"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":1,"harborBridgeCount":5,"zeroLines":0,"score":895,"clueCount":6,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":29434,"sampleIndex":5,"logicalDepth":3,"chainLength":1.09,"pctDepthGe2":7.4,"pctDepthGe3":1.2,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json","curationStyle":"relational-sparse-v1","depthDifficulty":"medium"}},{"id":6,"name":"Harbor Logic #6","difficulty":"medium","grid":[0,0,0,1,0,1,1,1,1,0,0,0,1,0,0,0,0,0,0,1,1,0,1,1,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,1,0,0,1,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0],"rc":[5,1,5,1,1,1,4,1,1],"cc":[0,2,2,4,1,5,2,3,1],"cl":{"6":"m","8":"e","21":"i4","57":"i2","59":"e","68":"m"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":1,"harborBridgeCount":5,"zeroLines":1,"score":887,"clueCount":6,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":21275,"sampleIndex":8,"logicalDepth":3,"chainLength":1.08,"pctDepthGe2":4.9,"pctDepthGe3":2.5,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json","curationStyle":"relational-sparse-v1","depthDifficulty":"medium"}},{"id":7,"name":"Harbor Logic #7","difficulty":"medium","grid":[0,0,1,0,1,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,1,1,0,1,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,1,1,1,1],"rc":[3,1,4,1,1,2,1,0,7],"cc":[1,2,4,1,5,2,3,1,1],"cl":{"4":"e","22":"i4","23":"e","40":"m","56":"i2","73":"m"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":1,"harborBridgeCount":5,"zeroLines":1,"score":654,"clueCount":6,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":22585,"sampleIndex":9,"logicalDepth":2,"chainLength":1.28,"pctDepthGe2":25.9,"pctDepthGe3":0,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json","curationStyle":"relational-sparse-v1","depthDifficulty":"medium"}},{"id":8,"name":"Harbor Logic #8","difficulty":"medium","grid":[0,0,0,0,0,0,1,0,0,1,0,0,1,0,1,0,1,1,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,1,0,0],"rc":[1,5,3,3,1,0,4,0,3],"cc":[3,1,1,4,1,3,4,1,2],"cl":{"15":"i4","18":"m","21":"m","42":"i1","57":"m"},"meta":{"score":423,"zeroLines":2,"clueCount":5,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":67402,"noIslandCalls":3477,"harbor":true,"sampleIndex":3,"logicalDepth":1,"chainLength":1.01,"pctDepthGe2":1.2,"pctDepthGe3":0,"needsBacktracking":true,"selectedFrom":"bimaru-harbor-library.json","curationStyle":"relational-sparse-v1","depthDifficulty":"easy"}},{"id":9,"name":"Harbor Logic #9","difficulty":"medium","grid":[0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,0,1,0,1,1,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,1,1,1,0,1,0,1,0,0,0,0,0,0,0,0,1,0],"rc":[1,2,2,3,3,1,1,6,1],"cc":[2,2,6,1,0,1,3,4,1],"cl":{"24":"i3","29":"i3","47":"e","65":"m","68":"s","70":"m"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":2,"harborBridgeCount":4,"zeroLines":1,"score":394,"clueCount":6,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":14758,"sampleIndex":22,"logicalDepth":2,"chainLength":1.16,"pctDepthGe2":14.8,"pctDepthGe3":0,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json","curationStyle":"relational-sparse-v1","depthDifficulty":"easy"}},{"id":10,"name":"Harbor Logic #10","difficulty":"medium","grid":[0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,1,1,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,0,0,0,1,0,1,1,1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1,0,1,0,0,1,0],"rc":[1,1,4,2,3,1,4,1,3],"cc":[0,2,6,2,3,2,0,1,4],"cl":{"20":"i4","22":"m","56":"m","58":"i2","76":"e","79":"s"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":1,"harborBridgeCount":5,"zeroLines":2,"score":336,"clueCount":6,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":24890,"sampleIndex":11,"logicalDepth":2,"chainLength":1.07,"pctDepthGe2":6.2,"pctDepthGe3":0,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json","curationStyle":"relational-sparse-v1","depthDifficulty":"easy"}},{"id":11,"name":"Harbor Logic #11","difficulty":"medium","grid":[1,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,1,1,0,1,1,1,1,0,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,1,1,0,0,1,0,0,0,1,0,0,0,0,0,0,1,0,1,0,0,0,0,0],"rc":[1,2,6,2,2,1,3,1,2],"cc":[4,1,0,4,2,3,1,1,4],"cl":{"0":"e","23":"i4","25":"m","53":"m","57":"i2","73":"s"},"meta":{"harbor":true,"islandCount":2,"highValueIslands":1,"harborBridgeCount":5,"zeroLines":1,"score":328,"clueCount":6,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":3728,"sampleIndex":6,"logicalDepth":2,"chainLength":1.09,"pctDepthGe2":8.6,"pctDepthGe3":0,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json","curationStyle":"relational-sparse-v1","depthDifficulty":"easy"}},{"id":12,"name":"Harbor Logic #12","difficulty":"medium","grid":[1,1,1,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,1,0,1,1,0,1,1,1,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1],"rc":[5,1,0,1,2,6,2,1,2],"cc":[1,2,2,5,1,2,2,1,4],"cl":{"14":"s","39":"e","46":"e","48":"i4","50":"m","53":"m"},"meta":{"harbor":true,"islandCount":1,"highValueIslands":1,"harborBridgeCount":4,"zeroLines":1,"score":184,"clueCount":6,"uniqueChecked":true,"uniquenessExact":true,"solverCalls":5815,"sampleIndex":25,"logicalDepth":2,"chainLength":1.13,"pctDepthGe2":12.3,"pctDepthGe3":0,"needsBacktracking":false,"selectedFrom":"bimaru-harbor-library.json","curationStyle":"relational-sparse-v1","depthDifficulty":"easy"}}];
 
 function idx(r,c){return r*N+c}
 function rcFromFlat(flat){var r=[],c=[]; for(let i=0;i<N;i++){let rs=0,cs=0; for(let j=0;j<N;j++){if(flat[idx(i,j)]===SH)rs++; if(flat[idx(j,i)]===SH)cs++;} r.push(rs); c.push(cs);} return {r,c};}
@@ -774,6 +774,71 @@ function partialValid(assign, rowTarget, colTarget, clueMap){
   }
   return true;
 }
+function propagateForcedAssignments(assign, rowTarget, colTarget, clueMap){
+  let changed=true;
+  while(changed){
+    changed=false;
+    for(let r=0;r<N;r++){
+      let ships=0, unknown=[];
+      for(let c=0;c<N;c++){
+        let i=idx(r,c), v=assign[i];
+        if(v===SH) ships++;
+        else if(v===null) unknown.push(i);
+      }
+      if(ships>rowTarget[r] || ships+unknown.length<rowTarget[r]) return {ok:false};
+      let force = ships===rowTarget[r] ? WA : (ships+unknown.length===rowTarget[r] ? SH : null);
+      if(force!==null){
+        for(let i of unknown){
+          if(assign[i]===null){ assign[i]=force; changed=true; }
+        }
+      }
+    }
+    for(let c=0;c<N;c++){
+      let ships=0, unknown=[];
+      for(let r=0;r<N;r++){
+        let i=idx(r,c), v=assign[i];
+        if(v===SH) ships++;
+        else if(v===null) unknown.push(i);
+      }
+      if(ships>colTarget[c] || ships+unknown.length<colTarget[c]) return {ok:false};
+      let force = ships===colTarget[c] ? WA : (ships+unknown.length===colTarget[c] ? SH : null);
+      if(force!==null){
+        for(let i of unknown){
+          if(assign[i]===null){ assign[i]=force; changed=true; }
+        }
+      }
+    }
+    if(clueMap){
+      for(let key in clueMap){
+        let t=clueMap[key];
+        if(!isIslandClueType(t)) continue;
+        let i=+key, r=Math.floor(i/N), c=i%N, target=islandClueTarget(t);
+        if(assign[i]===SH) return {ok:false};
+        if(assign[i]!==WA){ assign[i]=WA; changed=true; }
+        let ships=0, unknown=[];
+        for(let [nr,nc] of neighbors4(r,c)){
+          let ni=idx(nr,nc), v=assign[ni];
+          if(v===SH) ships++;
+          else if(v===null) unknown.push(ni);
+        }
+        if(ships>target || ships+unknown.length<target) return {ok:false};
+        let force = ships===target ? WA : (ships+unknown.length===target ? SH : null);
+        if(force!==null){
+          for(let ni of unknown){
+            if(assign[ni]===null){ assign[ni]=force; changed=true; }
+          }
+        }
+      }
+    }
+    if(!partialValid(assign, rowTarget, colTarget, clueMap) || !lineShapePossible(assign)) return {ok:false};
+    for(let i=0;i<N*N;i++){
+      if(assign[i]!==SH) continue;
+      let r=Math.floor(i/N), c=i%N;
+      if(!localAdjacencyOk(assign, r, c, clueMap)) return {ok:false};
+    }
+  }
+  return {ok:true};
+}
 function localAdjacencyOk(assign, r, c, clueMap){
   if(assign[idx(r,c)]!==SH) return true;
   for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
@@ -844,36 +909,49 @@ function countSolutionsForPuzzle(puz, limit, maxCallsOverride){
   let maxCalls=maxCallsOverride||22000;
   let cacheKey=puzzleSignature(puz)+'|'+limit+'|'+maxCalls;
   if(solverResultCache.has(cacheKey)) return Object.assign({}, solverResultCache.get(cacheKey));
-  let assign=new Array(N*N).fill(null);
-  for(let key in puz.cl){ let i=+key, t=puz.cl[key]; assign[i]=(t==='w'||isIslandClueType(t)?WA:SH); }
+  let seedAssign=new Array(N*N).fill(null);
+  for(let key in puz.cl){ let i=+key, t=puz.cl[key]; seedAssign[i]=(t==='w'||isIslandClueType(t)?WA:SH); }
+  let root = seedAssign.slice();
+  let propagated = propagateForcedAssignments(root, puz.rc, puz.cc, puz.cl);
+  if(!propagated.ok){
+    let result={solutions:0, exact:true, calls:0};
+    solverResultCache.set(cacheKey, result);
+    return Object.assign({}, result);
+  }
   let order=[];
-  for(let i=0;i<N*N;i++) if(assign[i]===null) order.push(i);
+  for(let i=0;i<N*N;i++) if(root[i]===null) order.push(i);
   order.sort((a,b)=>{
     let ar=Math.floor(a/N), ac=a%N, br=Math.floor(b/N), bc=b%N;
     let as=puz.rc[ar]+puz.cc[ac], bs=puz.rc[br]+puz.cc[bc];
     return bs-as;
   });
   let solutions=0, calls=0;
-  function dfs(pos){
+  function dfs(pos, assign){
     calls++;
     if(calls>maxCalls||solutions>=limit) return;
+    while(pos<order.length && assign[order[pos]]!==null) pos++;
     if(pos===order.length){
       if(partialValid(assign,puz.rc,puz.cc,puz.cl) && clueSatisfied(assign,puz.cl) && finalFleetOk(assign,puz.cl)) solutions++;
       return;
     }
     let i=order[pos], r=Math.floor(i/N), c=i%N;
-    assign[i]=WA;
-    if(partialValid(assign,puz.rc,puz.cc,puz.cl) && lineShapePossible(assign)) dfs(pos+1);
-    assign[i]=SH;
-    if(localAdjacencyOk(assign,r,c,puz.cl) && partialValid(assign,puz.rc,puz.cc,puz.cl) && lineShapePossible(assign)) dfs(pos+1);
-    assign[i]=null;
+    let tryWater=assign.slice();
+    tryWater[i]=WA;
+    let waterProp = propagateForcedAssignments(tryWater, puz.rc, puz.cc, puz.cl);
+    if(waterProp.ok && lineShapePossible(tryWater)) dfs(pos+1, tryWater);
+    let tryShip=assign.slice();
+    tryShip[i]=SH;
+    if(localAdjacencyOk(tryShip,r,c,puz.cl)){
+      let shipProp = propagateForcedAssignments(tryShip, puz.rc, puz.cc, puz.cl);
+      if(shipProp.ok && lineShapePossible(tryShip)) dfs(pos+1, tryShip);
+    }
   }
-  if(!partialValid(assign,puz.rc,puz.cc,puz.cl) || !lineShapePossible(assign)){
+  if(!partialValid(root,puz.rc,puz.cc,puz.cl) || !lineShapePossible(root)){
     let result={solutions:0, exact:true, calls:0};
     solverResultCache.set(cacheKey, result);
     return Object.assign({}, result);
   }
-  dfs(0);
+  dfs(0, root);
   let result = calls>maxCalls ? {solutions:solutions, exact:false, calls:calls} : {solutions:solutions, exact:true, calls:calls};
   solverResultCache.set(cacheKey, result);
   return Object.assign({}, result);
@@ -1213,9 +1291,9 @@ function randomPuzzle(){
     <div class="diff-filter" id="diff-filter">
       <button class="active" data-diff="all" onclick="filterPuzzles('all')">Alle (12)</button>
       <button data-diff="easy" onclick="filterPuzzles('easy')">⭐ Easy (0)</button>
-      <button data-diff="medium" onclick="filterPuzzles('medium')">⭐⭐ Medium (10)</button>
-      <button data-diff="hard" onclick="filterPuzzles('hard')">⭐⭐⭐ Hard (0)</button>
-      <button data-diff="expert" onclick="filterPuzzles('expert')">⭐⭐⭐⭐ Expert (2)</button>
+      <button data-diff="medium" onclick="filterPuzzles('medium')">⭐⭐ Medium (8)</button>
+      <button data-diff="hard" onclick="filterPuzzles('hard')">⭐⭐⭐ Hard (4)</button>
+      <button data-diff="expert" onclick="filterPuzzles('expert')">⭐⭐⭐⭐ Expert (0)</button>
     </div>
     <div class="puzzle-list" id="puzzle-list"></div>
   </div>
