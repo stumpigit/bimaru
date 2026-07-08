@@ -54,24 +54,37 @@ function summarizePuzzle(p, analysis){
 
 function strengthScore(summary){
   let score = 0;
-  score += summary.logicalDepth * 1000;
-  score += summary.pctDepthGe3 * 80;
-  score += summary.pctDepthGe2 * 30;
-  score += summary.avgChainLength * 150;
-  score += Math.min(250, (summary.solverCalls || 0) / 150);
-  score -= summary.clues * 25;
-  score -= summary.shipClues * 18;
-  score -= summary.singles * 70;
-  score -= summary.water * 120;
-  if (summary.islandVals.some(v => v >= 3)) score += 80;
-  if (summary.needsBacktracking) score += 100;
+  score += summary.logicalDepth * 520;
+  score += summary.pctDepthGe3 * 45;
+  score += summary.pctDepthGe2 * 18;
+  score += summary.avgChainLength * 90;
+  score += Math.min(120, (summary.solverCalls || 0) / 400);
+  if (summary.needsBacktracking) score += 40;
+
+  if (summary.islandClues === 1) score += 320;
+  else if (summary.islandClues === 2) score += 120;
+  else score -= Math.max(0, summary.islandClues - 2) * 320;
+
+  const maxIsland = summary.islandVals.length ? Math.max(...summary.islandVals) : 0;
+  if (maxIsland >= 4) score += 120;
+  else if (maxIsland >= 3) score += 40;
+
+  if (summary.shipClues <= 4) score += 220;
+  else if (summary.shipClues === 5) score += 60;
+
+  score -= summary.shipClues * 150;
+  score -= summary.mids * 260;
+  score -= summary.ends * 110;
+  score -= summary.singles * 60;
+  score -= summary.clues * 24;
+  score -= summary.water * 150;
   return Math.round(score);
 }
 
 function makeUniquePuzzle(harbor){
   let base = createInitialPuzzle(harbor);
   let islandVals = Object.values(base.cl).filter(v=>/^i/.test(v)).map(v=>Number(v.slice(1)));
-  if(islandVals.length < 2 || !islandVals.some(v=>v>=3)) return null;
+  if(islandVals.length < 1 || !islandVals.some(v=>v>=3)) return null;
 
   let flat = base.grid;
   let islandCells = Object.keys(base.cl)
@@ -87,15 +100,15 @@ function makeUniquePuzzle(harbor){
     let nearIsland=0;
     for(let isl of islandCells) if(Math.abs(isl.r-r)+Math.abs(isl.c-c)===1) nearIsland++;
     let centrality=8-(Math.abs(r-4)+Math.abs(c-4));
-    let weight=(t==='m'?50:t==='e'?32:10) + nearIsland*24 + centrality;
+    let weight=(t==='s'?30:t==='e'?18:4) + nearIsland*20 + centrality;
     candidates.push({ i, t, weight, nearIsland, centrality });
   }
 
   candidates.sort((a,b)=>b.weight-a.weight || a.i-b.i);
   let variants = [
-    candidates.filter(c=>c.t!=='s').concat(candidates.filter(c=>c.t==='s')),
-    candidates.filter(c=>c.t==='e').concat(candidates.filter(c=>c.t==='m')).concat(candidates.filter(c=>c.t==='s')),
-    candidates.filter(c=>c.t==='m' && c.nearIsland>0).concat(candidates.filter(c=>c.t==='e' && c.nearIsland>0)).concat(candidates.filter(c=>c.t==='m' && c.nearIsland===0)).concat(candidates.filter(c=>c.t==='e' && c.nearIsland===0)).concat(candidates.filter(c=>c.t==='s'))
+    candidates.filter(c=>c.t==='s').concat(candidates.filter(c=>c.t==='e')).concat(candidates.filter(c=>c.t==='m')),
+    candidates.filter(c=>c.t==='e' && c.nearIsland>0).concat(candidates.filter(c=>c.t==='s')).concat(candidates.filter(c=>c.t==='e' && c.nearIsland===0)).concat(candidates.filter(c=>c.t==='m')),
+    candidates.filter(c=>c.nearIsland===0 && c.t!=='m').concat(candidates.filter(c=>c.nearIsland>0 && c.t!=='m')).concat(candidates.filter(c=>c.t==='m'))
   ];
 
   let best = null;
@@ -104,7 +117,7 @@ function makeUniquePuzzle(harbor){
   let fallbackScore = -Infinity;
 
   for(let ordered of variants){
-    for(let targetClues=7; targetClues<=14; targetClues++){
+    for(let targetClues=5; targetClues<=9; targetClues++){
       let puz = clonePuzzle(base);
       for(let cand of ordered){
         if(Object.keys(puz.cl).length >= targetClues) break;
@@ -136,11 +149,12 @@ function makeUniquePuzzle(harbor){
         fallbackScore = score;
       }
 
-      if(summary.islandClues < 2) continue;
+      if(summary.islandClues < 1 || summary.islandClues > 2) continue;
       if(summary.water > 0) continue;
-      if(summary.shipClues < 5 || summary.shipClues > 10) continue;
-      if(summary.clues < 7 || summary.clues > 14) continue;
-      if(summary.singles > 2) continue;
+      if(summary.shipClues < 3 || summary.shipClues > 5) continue;
+      if(summary.clues < 5 || summary.clues > 8) continue;
+      if(summary.mids > 2) continue;
+      if(summary.ends > 3) continue;
       if(!summary.islandVals.some(v => v >= 3)) continue;
       if(!dep.essential || !dep.exact) continue;
 
@@ -170,13 +184,14 @@ function quickGenerate(tries=3){
     const analysis = analyzePuzzle(candidate);
     const summary = summarizePuzzle(candidate, analysis);
 
-    if(summary.islandClues < 2) continue;
+    if(summary.islandClues < 1 || summary.islandClues > 2) continue;
     if(summary.water > 0) continue;
-    if(summary.shipClues < 5 || summary.shipClues > 10) continue;
-    if(summary.clues < 7 || summary.clues > 14) continue;
-    if(summary.singles > 2) continue;
+    if(summary.shipClues < 3 || summary.shipClues > 5) continue;
+    if(summary.clues < 5 || summary.clues > 8) continue;
+    if(summary.mids > 2) continue;
+    if(summary.ends > 3) continue;
     if(!summary.islandVals.some(v => v >= 3)) continue;
-    if(!(analysis.logicalDepth >= 4 || analysis.pctDepthGe3 >= 6 || (analysis.logicalDepth >= 3 && analysis.pctDepthGe2 >= 18 && summary.shipClues <= 10))) continue;
+    if(!(analysis.logicalDepth >= 2 || (analysis.pctDepthGe2 >= 8 && summary.shipClues <= 5))) continue;
 
     const score = strengthScore(summary);
     candidate.meta.score = score;
