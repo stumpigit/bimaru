@@ -60,6 +60,7 @@ function clueStats(cl) {
 function relationalScore(p, a) {
   const s = clueStats(p.cl);
   const isOneIslandMinimal = (p.meta?.style === 'one-island-minimal');
+  const isOneIslandFamily = (p.meta?.style === 'one-island-family');
   let score = 0;
 
   // Keep some measured deduction signal, but lower than before.
@@ -72,6 +73,7 @@ function relationalScore(p, a) {
 
   // Human-facing sparsity / relational reasoning bias.
   if (isOneIslandMinimal) score += 1400;
+  if (isOneIslandFamily) score += 900;
   if (s.islands === 1) score += 320;
   else if (s.islands === 2) score += 120;
   else score -= (s.islands - 2) * 320;
@@ -98,8 +100,12 @@ function relationalScore(p, a) {
 function relationalEnough(p, a) {
   const s = clueStats(p.cl);
   const isOneIslandMinimal = (p.meta?.style === 'one-island-minimal');
+  const isOneIslandFamily = (p.meta?.style === 'one-island-family');
   if (isOneIslandMinimal) {
     return s.water <= 1 && s.islands === 1 && s.maxIsland >= 3 && s.ship <= 1 && s.clues === 2;
+  }
+  if (isOneIslandFamily) {
+    return s.islands === 1 && s.maxIsland >= 3 && s.clues === 3 && s.ship >= 1 && s.ship <= 2 && s.water <= 1;
   }
   if (s.water > 0) return false;
   if (s.islands < 1 || s.islands > 2) return false;
@@ -121,12 +127,12 @@ function relationalEnough(p, a) {
 
 const sources = [];
 for (const name of [
-  'bimaru-harbor-library.json',
   'hard_puzzles_generated.json',
   'hard_puzzles_run_a.json',
   'hard_puzzles_run_b.json',
   'hard_puzzles_run_c.json',
   'one_island_minimal_library.json',
+  'one_island_family_library.json',
 ]) {
   const filePath = path.join(ROOT, name);
   if (!fs.existsSync(filePath)) continue;
@@ -174,32 +180,83 @@ ranked.sort((x, y) =>
   x.stats.islands - y.stats.islands
 );
 
-const curated = ranked
-  .filter(r => r.relational)
+function shapeKey(r) {
+  return `${r.puzzle.rc.join(',')}|${r.puzzle.cc.join(',')}`;
+}
+function styleKey(r) {
+  if (r.puzzle.meta?.style === 'one-island-minimal') return 'one-island-minimal-v1';
+  if (r.puzzle.meta?.style === 'one-island-family') return 'one-island-family-v1';
+  return 'relational-sparse-v1';
+}
+function displayDifficulty(r) {
+  if (r.puzzle.meta?.style === 'one-island-minimal') return 'hard';
+  if (r.puzzle.meta?.style === 'one-island-family') {
+    if (r.analysis.logicalDepth >= 3 || r.analysis.pctDepthGe2 >= 8) return 'medium';
+    return 'hard';
+  }
+  if (r.analysis.logicalDepth >= 3 || r.analysis.pctDepthGe2 >= 10) return 'medium';
+  return 'hard';
+}
+
+const relational = ranked.filter(r => r.relational);
+const selected = [];
+const used = new Set();
+const perShape = new Map();
+function canTake(r, maxSameShape) {
+  const sig = shapeKey(r);
+  return !used.has(r) && (perShape.get(sig) || 0) < maxSameShape;
+}
+function takeFrom(pool, count, maxSameShape, extraPredicate = () => true) {
+  for (const r of pool) {
+    if (selected.length >= 12 || count <= 0) break;
+    if (!canTake(r, maxSameShape) || !extraPredicate(r)) continue;
+    selected.push(r);
+    used.add(r);
+    const sig = shapeKey(r);
+    perShape.set(sig, (perShape.get(sig) || 0) + 1);
+    count--;
+  }
+}
+
+const minimalPool = relational.filter(r => r.puzzle.meta?.style === 'one-island-minimal');
+const familyPool = relational.filter(r => r.puzzle.meta?.style === 'one-island-family');
+const legacyPool = relational.filter(r => !r.puzzle.meta?.style);
+
+// Keep a few sparse 1-island hammers, but stop them from dominating the whole set.
+takeFrom(minimalPool, 2, 3);
+// Main target band: medium-hard sparse puzzles with one island and one extra clue.
+takeFrom(familyPool, 3, 3, r => r.analysis.logicalDepth >= 2 || r.analysis.pctDepthGe2 >= 8 || r.stats.water > 0);
+// Prioritize structurally different legacy puzzles for variety and less lookahead-heavy solving.
+takeFrom(legacyPool, 5, 1, r => r.analysis.logicalDepth >= 2 && r.stats.clues <= 6);
+// Add more varied legacy candidates before more repeats of the same 1-island shape.
+takeFrom(legacyPool, 2, 1);
+// Fill the rest from the best remaining family/legacy rows, with a strict shape cap.
+takeFrom(familyPool, 12, 3);
+takeFrom(legacyPool, 12, 1);
+takeFrom(minimalPool, 12, 3);
+
+const curated = selected
   .slice(0, 12)
-  .map((r, i) => {
-    const relationalDifficulty = r.puzzle.meta?.style === 'one-island-minimal' ? 'hard' : (i < 4 ? 'hard' : 'medium');
-    return {
-      id: i + 1,
-      name: `Harbor Logic #${i + 1}`,
-      difficulty: relationalDifficulty,
-      grid: r.puzzle.grid,
-      rc: r.puzzle.rc,
-      cc: r.puzzle.cc,
-      cl: r.puzzle.cl,
-      meta: Object.assign({}, r.puzzle.meta || {}, {
-        logicalDepth: r.analysis.logicalDepth,
-        chainLength: r.analysis.avgChainLength,
-        pctDepthGe2: r.analysis.pctDepthGe2,
-        pctDepthGe3: r.analysis.pctDepthGe3,
-        needsBacktracking: r.analysis.needsBacktracking,
-        selectedFrom: r.source,
-        score: r.score,
-        curationStyle: r.puzzle.meta?.style === 'one-island-minimal' ? 'one-island-minimal-v1' : 'relational-sparse-v1',
-        depthDifficulty: r.difficulty,
-      }),
-    };
-  });
+  .map((r, i) => ({
+    id: i + 1,
+    name: `Harbor Logic #${i + 1}`,
+    difficulty: displayDifficulty(r),
+    grid: r.puzzle.grid,
+    rc: r.puzzle.rc,
+    cc: r.puzzle.cc,
+    cl: r.puzzle.cl,
+    meta: Object.assign({}, r.puzzle.meta || {}, {
+      logicalDepth: r.analysis.logicalDepth,
+      chainLength: r.analysis.avgChainLength,
+      pctDepthGe2: r.analysis.pctDepthGe2,
+      pctDepthGe3: r.analysis.pctDepthGe3,
+      needsBacktracking: r.analysis.needsBacktracking,
+      selectedFrom: r.source,
+      score: r.score,
+      curationStyle: styleKey(r),
+      depthDifficulty: r.difficulty,
+    }),
+  }));
 
 fs.writeFileSync(path.join(ROOT, 'selected_strong_harbor_library.json'), JSON.stringify(curated, null, 2) + '\n');
 console.log(JSON.stringify({
@@ -213,10 +270,13 @@ console.log(JSON.stringify({
     clues: Object.keys(p.cl).length,
     ship: Object.values(p.cl).filter(v => v === 's' || v === 'e' || v === 'm').length,
     islands: Object.values(p.cl).filter(v => /^i/.test(v)).length,
+    rc: p.rc.join(','),
+    cc: p.cc.join(','),
     ld: p.meta.logicalDepth,
     pg2: p.meta.pctDepthGe2,
     pg3: p.meta.pctDepthGe3,
     src: p.meta.selectedFrom,
+    style: p.meta.curationStyle,
     score: p.meta.score,
   })),
 }, null, 2));
