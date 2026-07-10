@@ -101,6 +101,9 @@ function relationalEnough(p, a) {
   const s = clueStats(p.cl);
   const isOneIslandMinimal = (p.meta?.style === 'one-island-minimal');
   const isOneIslandFamily = (p.meta?.style === 'one-island-family');
+  if (a.logicalDepth >= 8 && s.islands >= 1 && s.islands <= 3 && s.clues <= 11 && s.water <= 0) {
+    return true;
+  }
   if (isOneIslandMinimal) {
     return s.water <= 1 && s.islands === 1 && s.maxIsland >= 3 && s.ship <= 1 && s.clues === 2;
   }
@@ -133,6 +136,8 @@ for (const name of [
   'hard_puzzles_run_c.json',
   'one_island_minimal_library.json',
   'one_island_family_library.json',
+  'harbor_hardened_candidates.json',
+  'harbor_background_hard_expert_found.json',
 ]) {
   const filePath = path.join(ROOT, name);
   if (!fs.existsSync(filePath)) continue;
@@ -186,57 +191,91 @@ function shapeKey(r) {
 function styleKey(r) {
   if (r.puzzle.meta?.style === 'one-island-minimal') return 'one-island-minimal-v1';
   if (r.puzzle.meta?.style === 'one-island-family') return 'one-island-family-v1';
+  if (r.puzzle.meta?.backgroundHardSearch) return 'background-hard-expert-v1';
+  if (r.puzzle.meta?.hardenedBy) return 'hardened-relational-v1';
   return 'relational-sparse-v1';
 }
 function displayDifficulty(r) {
+  if (r.puzzle.meta?.backgroundHardSearch) {
+    if (r.analysis.logicalDepth >= 8) return 'expert';
+    if (r.analysis.logicalDepth >= 5) return 'hard';
+    if (r.analysis.logicalDepth >= 2 || r.analysis.pctDepthGe2 >= 10) return 'medium';
+    return 'easy';
+  }
+  if (r.difficulty === 'expert') return 'expert';
   if (r.puzzle.meta?.style === 'one-island-minimal') return 'hard';
   if (r.puzzle.meta?.style === 'one-island-family') {
     if (r.analysis.logicalDepth >= 3 || r.analysis.pctDepthGe2 >= 8) return 'medium';
     return 'hard';
   }
-  if (r.analysis.logicalDepth >= 3 || r.analysis.pctDepthGe2 >= 10) return 'medium';
-  return 'hard';
+  if (r.difficulty === 'medium') {
+    if (r.analysis.logicalDepth >= 4 || r.analysis.pctDepthGe3 >= 4.5) return 'hard';
+    return 'medium';
+  }
+  if (r.analysis.logicalDepth >= 2 || r.analysis.pctDepthGe2 >= 10) return 'medium';
+  return 'easy';
 }
+
+const TARGET_TOTAL = 20;
+const TARGET_BY_DIFF = { expert: 4, hard: 6, medium: 8, easy: 2 };
 
 const relational = ranked.filter(r => r.relational);
 const selected = [];
 const used = new Set();
 const perShape = new Map();
+const perDiff = { expert: 0, hard: 0, medium: 0, easy: 0 };
 function canTake(r, maxSameShape) {
   const sig = shapeKey(r);
   return !used.has(r) && (perShape.get(sig) || 0) < maxSameShape;
 }
 function takeFrom(pool, count, maxSameShape, extraPredicate = () => true) {
   for (const r of pool) {
-    if (selected.length >= 12 || count <= 0) break;
+    if (selected.length >= TARGET_TOTAL || count <= 0) break;
     if (!canTake(r, maxSameShape) || !extraPredicate(r)) continue;
+    const diff = displayDifficulty(r);
     selected.push(r);
     used.add(r);
+    perDiff[diff] = (perDiff[diff] || 0) + 1;
     const sig = shapeKey(r);
     perShape.set(sig, (perShape.get(sig) || 0) + 1);
     count--;
   }
 }
 
+const byDisplayedDiff = {
+  expert: relational.filter(r => displayDifficulty(r) === 'expert'),
+  hard: relational.filter(r => displayDifficulty(r) === 'hard'),
+  medium: relational.filter(r => displayDifficulty(r) === 'medium'),
+  easy: relational.filter(r => displayDifficulty(r) === 'easy'),
+};
 const minimalPool = relational.filter(r => r.puzzle.meta?.style === 'one-island-minimal');
 const familyPool = relational.filter(r => r.puzzle.meta?.style === 'one-island-family');
 const legacyPool = relational.filter(r => !r.puzzle.meta?.style);
 
-// Keep a few sparse 1-island hammers, but stop them from dominating the whole set.
+// Expert first: only genuinely deep historical outliers.
+takeFrom(byDisplayedDiff.expert, TARGET_BY_DIFF.expert, 1);
+// If another distinct expert exists, force it in before lower bands fill the list.
+takeFrom(byDisplayedDiff.expert, TARGET_BY_DIFF.expert - perDiff.expert, 2);
+// Hard: a small number of sparse hammers plus some denser challenging boards.
 takeFrom(minimalPool, 2, 3);
-// Main target band: medium-hard sparse puzzles with one island and one extra clue.
-takeFrom(familyPool, 3, 3, r => r.analysis.logicalDepth >= 2 || r.analysis.pctDepthGe2 >= 8 || r.stats.water > 0);
-// Prioritize structurally different legacy puzzles for variety and less lookahead-heavy solving.
-takeFrom(legacyPool, 5, 1, r => r.analysis.logicalDepth >= 2 && r.stats.clues <= 6);
-// Add more varied legacy candidates before more repeats of the same 1-island shape.
-takeFrom(legacyPool, 2, 1);
-// Fill the rest from the best remaining family/legacy rows, with a strict shape cap.
-takeFrom(familyPool, 12, 3);
-takeFrom(legacyPool, 12, 1);
-takeFrom(minimalPool, 12, 3);
+takeFrom(byDisplayedDiff.hard.filter(r => !r.puzzle.meta?.style), TARGET_BY_DIFF.hard - perDiff.hard, 1);
+// Medium: main band — varied, solvable without excessive lookahead.
+takeFrom(familyPool.filter(r => displayDifficulty(r) === 'medium'), 2, 3);
+takeFrom(byDisplayedDiff.medium.filter(r => !r.puzzle.meta?.style), TARGET_BY_DIFF.medium - perDiff.medium, 1, r => r.stats.clues <= 8);
+// Easy: accessible legacy boards with cleaner local progress.
+takeFrom(byDisplayedDiff.easy.filter(r => !r.puzzle.meta?.style), TARGET_BY_DIFF.easy, 1, r => r.stats.clues <= 8);
+// If easy is still under-filled, allow a couple of one-island family offcuts.
+takeFrom(byDisplayedDiff.easy, TARGET_BY_DIFF.easy - perDiff.easy, 2);
+// Fill remaining medium/hard slots before allowing more repeats of the same one-island shape.
+takeFrom(byDisplayedDiff.medium, TARGET_BY_DIFF.medium - perDiff.medium, 2);
+takeFrom(byDisplayedDiff.hard, TARGET_BY_DIFF.hard - perDiff.hard, 2);
+// If expert is still under-filled, relax shape repetition slightly for the remaining expert slot.
+takeFrom(byDisplayedDiff.expert, TARGET_BY_DIFF.expert - perDiff.expert, 3);
+// Final fill if any quota missed.
+takeFrom(relational, TARGET_TOTAL - selected.length, 4);
 
 const curated = selected
-  .slice(0, 12)
+  .slice(0, TARGET_TOTAL)
   .map((r, i) => ({
     id: i + 1,
     name: `Harbor Logic #${i + 1}`,
@@ -263,6 +302,7 @@ console.log(JSON.stringify({
   totalSources: ranked.length,
   relationalCount: ranked.filter(r => r.relational).length,
   curated: curated.length,
+  byDisplayedDifficulty: curated.reduce((m, p) => { m[p.difficulty] = (m[p.difficulty] || 0) + 1; return m; }, {}),
   top: curated.map(p => ({
     id: p.id,
     name: p.name,
